@@ -37,7 +37,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 catkin_package(
- CATKIN_DEPENDS roscpp rospy std_msgs
+  INCLUDE_DIRS  include
+  CATKIN_DEPENDS roscpp rospy std_msgs
 )
 
 include_directories(
@@ -50,7 +51,7 @@ include_directories(
 add_library(utils_lib src/utils.cpp)
 
 
-add_executable(btc_place_recognition example/place_recognition.cpp src/btc.cpp)
+add_executable(btc_place_recognition src/btc_main.cpp src/btc.cpp)
 target_link_libraries(btc_place_recognition 
         ${catkin_LIBRARIES} 
         ${PCL_LIBRARIES} 
