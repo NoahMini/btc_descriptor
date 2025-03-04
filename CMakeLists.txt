@@ -13,6 +13,8 @@ SET(CMAKE_BUILD_TYPE "Release")
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  ibow-lcd
+  obindex2
   cv_bridge
   pcl_conversions
   pcl_ros

@@ -8,8 +8,9 @@
 
 #include "include/btc.h"
 #include "include/utils.h"
+#include "ibow-lcd/lcdetector.h"
 
-// Read KITTI data
+// Read KITTI data                                                                        FIGURE OUT INCLUSIONS
 std::vector<float> read_lidar_data(const std::string lidar_data_path) {
   std::ifstream lidar_data_file;
   lidar_data_file.open(lidar_data_path,
@@ -31,7 +32,9 @@ std::vector<float> read_lidar_data(const std::string lidar_data_path) {
 }
 
 int main(int argc, char **argv) {
-  ros::init(argc, argv, "btc_place_recognition");
+  
+  // Setup                                                                             DONT WORRY ABOUT THIS ?
+  ros::init(argc, argv, "adam_lcd");
   ros::NodeHandle nh;
   std::string setting_path = "";
   std::string pcds_dir = "";
@@ -177,7 +180,7 @@ int main(int argc, char **argv) {
         }
       }
 
-      // step1. Descriptor Extraction
+      // step1. Descriptor Extraction                                                   THIS IS FINE
       std::cout << "[Description] submap id:" << submap_id << std::endl;
       auto t_descriptor_begin = std::chrono::high_resolution_clock::now();
       std::vector<BTC> btcs_vec;
@@ -185,7 +188,9 @@ int main(int argc, char **argv) {
                                     btcs_vec);
       auto t_descriptor_end = std::chrono::high_resolution_clock::now();
       descriptor_time.push_back(time_inc(t_descriptor_end, t_descriptor_begin));
-      // step2. Searching Loop
+      
+      
+      // step2. Searching Loop                                                          TODO : this is the part where ibow goes
       auto t_query_begin = std::chrono::high_resolution_clock::now();
       std::pair<int, double> search_result(-1, 0);
       std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
@@ -193,9 +198,6 @@ int main(int argc, char **argv) {
       loop_transform.second = Eigen::Matrix3d::Identity();
       std::vector<std::pair<BTC, BTC>> loop_std_pair;
       if (submap_id > config_setting.skip_near_num_) {
-        if (btcs_vec.size() == 0) {
-          // getchar();
-        }
         btc_manager->SearchLoop(btcs_vec, search_result, loop_transform,
                                 loop_std_pair);
       }
@@ -207,7 +209,7 @@ int main(int argc, char **argv) {
       auto t_query_end = std::chrono::high_resolution_clock::now();
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
 
-      // step3. Add descriptors to the database
+      // step3. Add descriptors to the database                                           TODO :
       auto t_map_update_begin = std::chrono::high_resolution_clock::now();
       btc_manager->AddBtcDescs(btcs_vec);
       auto t_map_update_end = std::chrono::high_resolution_clock::now();
@@ -224,7 +226,7 @@ int main(int argc, char **argv) {
       down_sampling_voxel(transform_cloud, 0.5);
       btc_manager->key_cloud_vec_.push_back(transform_cloud.makeShared());
 
-      // visuliazaion
+      // visulisation                                                                     DONT WORRY ABOUT THIS
       sensor_msgs::PointCloud2 pub_cloud;
       pcl::toROSMsg(transform_cloud, pub_cloud);
       pub_cloud.header.frame_id = "camera_init";
