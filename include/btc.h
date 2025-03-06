@@ -41,7 +41,7 @@ typedef struct ConfigSetting {
   float proj_image_high_inc_ = 0.5;
   float proj_dis_min_ = 0;
   float proj_dis_max_ = 5;
-  float summary_min_thre_ = 10;
+  float summary_min_thre_ = 10;             //minimum intensity threshold
   int line_filter_enable_ = 0;
 
   /* for triangle descriptor */
@@ -72,7 +72,7 @@ typedef struct ConfigSetting {
 
 typedef struct BinaryDescriptor {
   std::vector<bool> occupy_array_;
-  unsigned char summary_;
+  unsigned char summary_;               //intensity (why is it a char???? storage maybe??)
   Eigen::Vector3d location_;
 } BinaryDescriptor;
 

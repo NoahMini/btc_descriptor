@@ -34,7 +34,7 @@ std::vector<float> read_lidar_data(const std::string lidar_data_path) {
 int main(int argc, char **argv) {
   
   // Setup                                                                             DONT WORRY ABOUT THIS ?
-  ros::init(argc, argv, "adam_lcd");
+  ros::init(argc, argv, "btc_place_recognition");
   ros::NodeHandle nh;
   std::string setting_path = "";
   std::string pcds_dir = "";
@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
       down_sampling_voxel(transform_cloud, 0.5);
       btc_manager->key_cloud_vec_.push_back(transform_cloud.makeShared());
 
-      // visulisation                                                                     DONT WORRY ABOUT THIS
+      // visulisation                                                                     DONT WORRY ABOUT THIS 
       sensor_msgs::PointCloud2 pub_cloud;
       pcl::toROSMsg(transform_cloud, pub_cloud);
       pub_cloud.header.frame_id = "camera_init";
