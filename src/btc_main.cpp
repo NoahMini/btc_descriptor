@@ -8,7 +8,7 @@
 
 #include "include/btc.h"
 #include "include/utils.h"
-#include "ibow-lcd/lcdetector.h"
+//#include "ibow-lcd/lcdetector.h"
 
 // Read KITTI data                                                                        FIGURE OUT INCLUSIONS
 std::vector<float> read_lidar_data(const std::string lidar_data_path) {
