@@ -50,8 +50,6 @@
   <!--   <doc_depend>doxygen</doc_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
 
-  <build_depend>obindex2</build_depend>
-  <build_depend>ibow-lcd</build_depend>
   <build_depend>cv_bridge</build_depend>
   <build_depend>libpcl-all-dev</build_depend>
   <build_depend>roscpp</build_depend>
@@ -59,8 +57,6 @@
   <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
 
-  <build_export_depend>obindex2</build_export_depend>
-  <build_export_depend>ibow-lcd</build_export_depend>
   <build_export_depend>cv_bridge</build_export_depend>
   <build_export_depend>libpcl-all-dev</build_export_depend>
   <build_export_depend>roscpp</build_export_depend>
@@ -68,9 +64,7 @@
   <build_export_depend>sensor_msgs</build_export_depend>
   <build_export_depend>std_msgs</build_export_depend>
   <build_export_depend>tf_conversions</build_export_depend>
-  
-  <exec_depend>obindex2</exec_depend>
-  <exec_depend>ibow-lcd</exec_depend>
+
   <exec_depend>cv_bridge</exec_depend>
   <exec_depend>libpcl-all</exec_depend>
   <exec_depend>roscpp</exec_depend>
