@@ -189,18 +189,44 @@ int main(int argc, char **argv) {
       auto t_descriptor_end = std::chrono::high_resolution_clock::now();
       descriptor_time.push_back(time_inc(t_descriptor_end, t_descriptor_begin));
       
-      
       // step2. Searching Loop                                                          TODO : this is the part where ibow goes
       auto t_query_begin = std::chrono::high_resolution_clock::now();
       std::pair<int, double> search_result(-1, 0);
-      std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
-      loop_transform.first << 0, 0, 0;
-      loop_transform.second = Eigen::Matrix3d::Identity();
-      std::vector<std::pair<BTC, BTC>> loop_std_pair;
-      if (submap_id > config_setting.skip_near_num_) {
-        btc_manager->SearchLoop(btcs_vec, search_result, loop_transform,
-                                loop_std_pair);
+      // std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
+      // loop_transform.first << 0, 0, 0;
+      // loop_transform.second = Eigen::Matrix3d::Identity();
+      // std::vector<std::pair<BTC, BTC>> loop_std_pair;
+
+      // if (submap_id > config_setting.skip_near_num_) {
+      //   btc_manager->SearchLoop(btcs_vec, search_result, loop_transform,
+      //                           loop_std_pair);
+      // }
+
+      std::vector<cv::Point3f> kps;
+      cv::Mat dscs;
+      cv::Point3f p_kps;
+      std::vector<bool> ABC;
+
+    
+      for (ind = 0; ind < btcs_vec.size(); ++ind){
+        p_kps.x = btcs_vec[ind].center_[0];
+        p_kps.y = btcs_vec[ind].center_[1];
+        p_kps.z = btcs_vec[ind].center_[2];
+        kps.push_back(p_kps);
+
+        ABC.reserve( binary_A_.size() + binary_B_.size() + binary_C_.size()); // preallocate memory
+        ABC.insert( ABC.end(), binary_A_.begin(), binary_A_.end() );
+        ABC.insert( ABC.end(), binary_B_.begin(), binary_B_.end() );
+        ABC.insert( ABC.end(), binary_C_.begin(), binary_C_.end() );
+
+        dscs.push_back(ABC)
       }
+
+
+      //GET BINARY DESCRIPTORS FROM BTCS_VEC AND TURN INTO CV::MAT
+      //GET KPS FROM BTC_VEC
+      lcdet.process(submap_id, kps, dscs, search_result);
+
       if (search_result.first > 0) {
         std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second
