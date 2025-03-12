@@ -208,23 +208,28 @@ int main(int argc, char **argv) {
       std::vector<bool> ABC;
 
     
-      for (ind = 0; ind < btcs_vec.size(); ++ind){
+      for (int ind = 0; ind < btcs_vec.size(); ++ind){
         p_kps.x = btcs_vec[ind].center_[0];
         p_kps.y = btcs_vec[ind].center_[1];
         p_kps.z = btcs_vec[ind].center_[2];
         kps.push_back(p_kps);
 
-        ABC.reserve( binary_A_.size() + binary_B_.size() + binary_C_.size()); // preallocate memory
-        ABC.insert( ABC.end(), binary_A_.begin(), binary_A_.end() );
-        ABC.insert( ABC.end(), binary_B_.begin(), binary_B_.end() );
-        ABC.insert( ABC.end(), binary_C_.begin(), binary_C_.end() );
+        ABC.reserve( btcs_vec[ind].binary_A_.occupy_array_.size() + btcs_vec[ind].binary_B_.occupy_array_.size() + 
+                                                                    btcs_vec[ind].binary_C_.occupy_array_.size()); // preallocate memory
+        ABC.insert( ABC.end(), btcs_vec[ind].binary_A_.occupy_array_.begin(), btcs_vec[ind].binary_A_.occupy_array_.end() );
+        ABC.insert( ABC.end(), btcs_vec[ind].binary_B_.occupy_array_.begin(), btcs_vec[ind].binary_B_.occupy_array_.end() );
+        ABC.insert( ABC.end(), btcs_vec[ind].binary_C_.occupy_array_.begin(), btcs_vec[ind].binary_C_.occupy_array_.end() );
 
-        dscs.push_back(ABC)
+        dscs.push_back(ABC);
       }
 
 
       //GET BINARY DESCRIPTORS FROM BTCS_VEC AND TURN INTO CV::MAT
       //GET KPS FROM BTC_VEC
+      // Creating the loop closure detector object
+      ibow_lcd::LCDetectorParams params;  // Assign desired parameters
+      ibow_lcd::LCDetector lcdet(params);
+
       lcdet.process(submap_id, kps, dscs, search_result);
 
       if (search_result.first > 0) {
@@ -282,7 +287,7 @@ int main(int argc, char **argv) {
         triggle_loop_num++;
         Eigen::Matrix4d transform1 = Eigen::Matrix4d::Identity();
         Eigen::Matrix4d transform2 = Eigen::Matrix4d::Identity();
-        publish_std(loop_std_pair, transform1, transform2, pubBTC);
+        // publish_std(loop_std_pair, transform1, transform2, pubBTC);
         slow_loop.sleep();
         double cloud_overlap =
             calc_overlap(transform_cloud.makeShared(),
