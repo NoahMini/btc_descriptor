@@ -11,7 +11,7 @@ proj_plane_num: 2    # Number of projection planes
 proj_image_resolution: 0.2  # In meters
 proj_image_high_inc: 0.1    # In meters
 proj_dis_min: -1.0   # Minimum distance to the projection plane
-proj_dis_max: 4.0  # Maximum distance to the projection plane
+proj_dis_max: 3.1  # Maximum distance to the projection plane
 summary_min_thre: 6  # Minimum number of points in one image grid
 line_filter_enable: 0  # Enable line point filtering; turn off in environments lacking features (indoor and outdoor), otherwise enable to reduce computation
 

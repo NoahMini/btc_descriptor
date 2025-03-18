@@ -9,6 +9,7 @@
 #include "include/btc.h"
 #include "include/utils.h"
 #include "ibow-lcd/lcdetector.h"
+#include "obindex2/binary_descriptor.h"
 
 // Read KITTI data                                                                        FIGURE OUT INCLUSIONS
 std::vector<float> read_lidar_data(const std::string lidar_data_path) {
@@ -192,6 +193,7 @@ int main(int argc, char **argv) {
       // step2. Searching Loop                                                          TODO : this is the part where ibow goes
       auto t_query_begin = std::chrono::high_resolution_clock::now();
       std::pair<int, double> search_result(-1, 0);
+
       // std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
       // loop_transform.first << 0, 0, 0;
       // loop_transform.second = Eigen::Matrix3d::Identity();
@@ -203,9 +205,10 @@ int main(int argc, char **argv) {
       // }
 
       std::vector<cv::Point3f> kps;
-      cv::Mat dscs;
+      cv::Mat dscs= cv::Mat(btcs_vec.size(), 128, CV_8U);
       cv::Point3f p_kps;
       std::vector<bool> ABC;
+      obindex2::BinaryDescriptor d1(128);
 
     
       for (int ind = 0; ind < btcs_vec.size(); ++ind){
@@ -214,15 +217,35 @@ int main(int argc, char **argv) {
         p_kps.z = btcs_vec[ind].center_[2];
         kps.push_back(p_kps);
 
-        ABC.reserve( btcs_vec[ind].binary_A_.occupy_array_.size() + btcs_vec[ind].binary_B_.occupy_array_.size() + 
-                                                                    btcs_vec[ind].binary_C_.occupy_array_.size()); // preallocate memory
-        ABC.insert( ABC.end(), btcs_vec[ind].binary_A_.occupy_array_.begin(), btcs_vec[ind].binary_A_.occupy_array_.end() );
-        ABC.insert( ABC.end(), btcs_vec[ind].binary_B_.occupy_array_.begin(), btcs_vec[ind].binary_B_.occupy_array_.end() );
-        ABC.insert( ABC.end(), btcs_vec[ind].binary_C_.occupy_array_.begin(), btcs_vec[ind].binary_C_.occupy_array_.end() );
+        for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_A_.occupy_array_.size(); bin_ind++){
+          if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind] == 1) {
+            d1.set(bin_ind);
+          } else {
+            d1.reset(bin_ind);
+          }
+        }
+        for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_B_.occupy_array_.size(); bin_ind++){
+          if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind] == 1) {
+            d1.set(int(bin_ind + 40));
+          } else {
+            d1.reset(bin_ind);
+          }
+        }
+        for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_C_.occupy_array_.size(); bin_ind++){
+          if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind] == 1) {
+            d1.set(int(bin_ind + 80));
+          } else {
+            d1.reset(bin_ind);
+          }
+        }
 
-        dscs.push_back(ABC);
+        // std::cout << d1.toString() << std::endl;
+        cv::Mat m = d1.toCvMat();
+
+        dscs.row(ind) = m.row(0);
       }
 
+      
 
       //GET BINARY DESCRIPTORS FROM BTCS_VEC AND TURN INTO CV::MAT
       //GET KPS FROM BTC_VEC
@@ -232,6 +255,10 @@ int main(int argc, char **argv) {
 
       lcdet.process(submap_id, kps, dscs, search_result);
 
+      std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
+                  << search_result.first << ", score:" << search_result.second
+                  << std::endl;
+                  
       if (search_result.first > 0) {
         std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second
@@ -241,17 +268,17 @@ int main(int argc, char **argv) {
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
 
       // step3. Add descriptors to the database                                           TODO :
-      auto t_map_update_begin = std::chrono::high_resolution_clock::now();
-      btc_manager->AddBtcDescs(btcs_vec);
-      auto t_map_update_end = std::chrono::high_resolution_clock::now();
-      update_time.push_back(time_inc(t_map_update_end, t_map_update_begin));
-      std::cout << "[Time] descriptor extraction: "
-                << time_inc(t_descriptor_end, t_descriptor_begin) << "ms, "
-                << "query: " << time_inc(t_query_end, t_query_begin) << "ms, "
-                << "update map:"
-                << time_inc(t_map_update_end, t_map_update_begin) << "ms"
-                << std::endl;
-      std::cout << std::endl;
+      // auto t_map_update_begin = std::chrono::high_resolution_clock::now();
+      // btc_manager->AddBtcDescs(btcs_vec);
+      // auto t_map_update_end = std::chrono::high_resolution_clock::now();
+      // update_time.push_back(time_inc(t_map_update_end, t_map_update_begin));
+      // std::cout << "[Time] descriptor extraction: "
+      //           << time_inc(t_descriptor_end, t_descriptor_begin) << "ms, "
+      //           << "query: " << time_inc(t_query_end, t_query_begin) << "ms, "
+      //           << "update map:"
+      //           << time_inc(t_map_update_end, t_map_update_begin) << "ms"
+      //           << std::endl;
+      // std::cout << std::endl;
 
       // down sample to save memory
       down_sampling_voxel(transform_cloud, 0.5);
