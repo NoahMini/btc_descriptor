@@ -44,6 +44,15 @@ int main(int argc, char **argv) {
   double cloud_overlap_thr = 0.5;
   bool calc_gt_enable = false;
   bool read_bin = true;
+  int count_tp_ov = 0;
+  int count_fp_ov = 0;
+  int count_tp_in = 0;
+  int count_fp_in = 0;
+
+  int count_fn_is = 0;
+  int count_tn_is = 0;
+  int count_fn_in = 0;
+  int count_tn_in = 0;
   nh.param<double>("cloud_overlap_thr", cloud_overlap_thr, 0.5);
   nh.param<std::string>("setting_path", setting_path, "");
   nh.param<std::string>("pcds_dir", pcds_dir, "");
@@ -121,6 +130,11 @@ int main(int argc, char **argv) {
   pcl::PCDReader reader;
 
   while (ros::ok() && !finish) {
+
+    // Creating the loop closure detector object
+    ibow_lcd::LCDetectorParams params;  // Assign desired parameters
+    ibow_lcd::LCDetector lcdet(params);
+
     for (size_t submap_id = 0; submap_id < pose_list.size(); ++submap_id) {
       pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(
           new pcl::PointCloud<pcl::PointXYZI>());
@@ -190,32 +204,24 @@ int main(int argc, char **argv) {
       auto t_descriptor_end = std::chrono::high_resolution_clock::now();
       descriptor_time.push_back(time_inc(t_descriptor_end, t_descriptor_begin));
       
-      // step2. Searching Loop                                                          TODO : this is the part where ibow goes
+      // step2_1. Transform BTC descriptor to fit iBoW::process requirements                                                        
       auto t_query_begin = std::chrono::high_resolution_clock::now();
       std::pair<int, double> search_result(-1, 0);
-
-      // std::pair<Eigen::Vector3d, Eigen::Matrix3d> loop_transform;
-      // loop_transform.first << 0, 0, 0;
-      // loop_transform.second = Eigen::Matrix3d::Identity();
-      // std::vector<std::pair<BTC, BTC>> loop_std_pair;
-
-      // if (submap_id > config_setting.skip_near_num_) {
-      //   btc_manager->SearchLoop(btcs_vec, search_result, loop_transform,
-      //                           loop_std_pair);
-      // }
 
       std::vector<cv::Point3f> kps;
       cv::Mat dscs= cv::Mat(btcs_vec.size(), 128, CV_8U);
       cv::Point3f p_kps;
       std::vector<bool> ABC;
       obindex2::BinaryDescriptor d1(128);
+      std::cout << btcs_vec.size() << std::endl;
 
-    
+      //Convert descriptors
       for (int ind = 0; ind < btcs_vec.size(); ++ind){
         p_kps.x = btcs_vec[ind].center_[0];
         p_kps.y = btcs_vec[ind].center_[1];
         p_kps.z = btcs_vec[ind].center_[2];
         kps.push_back(p_kps);
+        if (ind == 0){std::cout << "kps:" << p_kps.x << " , " << p_kps.y << " , " << p_kps.z << " , " << std::endl;}
 
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_A_.occupy_array_.size(); bin_ind++){
           if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind] == 1) {
@@ -225,45 +231,41 @@ int main(int argc, char **argv) {
           }
         }
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_B_.occupy_array_.size(); bin_ind++){
-          if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind] == 1) {
+          if (btcs_vec[ind].binary_B_.occupy_array_[bin_ind] == 1) {
             d1.set(int(bin_ind + 40));
           } else {
-            d1.reset(bin_ind);
+            d1.reset(int(bin_ind + 40));
           }
         }
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_C_.occupy_array_.size(); bin_ind++){
-          if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind] == 1) {
+          if (btcs_vec[ind].binary_C_.occupy_array_[bin_ind] == 1) {
             d1.set(int(bin_ind + 80));
           } else {
-            d1.reset(bin_ind);
+            d1.reset(int(bin_ind + 80));
           }
         }
 
-        // std::cout << d1.toString() << std::endl;
+        if (ind == 0){std::cout << d1.toString() << std::endl;}
         cv::Mat m = d1.toCvMat();
 
         dscs.row(ind) = m.row(0);
       }
 
-      
-
-      //GET BINARY DESCRIPTORS FROM BTCS_VEC AND TURN INTO CV::MAT
-      //GET KPS FROM BTC_VEC
-      // Creating the loop closure detector object
-      ibow_lcd::LCDetectorParams params;  // Assign desired parameters
-      ibow_lcd::LCDetector lcdet(params);
+      // step2_2. Searching Loop   
+      auto t_transform_end = std::chrono::high_resolution_clock::now();
+      std::cout << "[Time] Transform input from BTC: " << time_inc(t_transform_end, t_query_begin) << "ms, " << std::endl;
 
       lcdet.process(submap_id, kps, dscs, search_result);
 
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second
-                  << std::endl;
-                  
-      if (search_result.first > 0) {
-        std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
-                  << search_result.first << ", score:" << search_result.second
-                  << std::endl;
-      }
+                  << std::endl << std::endl;
+
+      // if (search_result.first > 0) {
+      //   std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
+      //             << search_result.first << ", score:" << search_result.second
+      //             << std::endl << std::endl;
+      // }
       auto t_query_end = std::chrono::high_resolution_clock::now();
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
 
@@ -284,7 +286,7 @@ int main(int argc, char **argv) {
       down_sampling_voxel(transform_cloud, 0.5);
       btc_manager->key_cloud_vec_.push_back(transform_cloud.makeShared());
 
-      // visulisation                                                                     DONT WORRY ABOUT THIS 
+      // visulization                                                                     DONT WORRY ABOUT THIS 
       sensor_msgs::PointCloud2 pub_cloud;
       pcl::toROSMsg(transform_cloud, pub_cloud);
       pub_cloud.header.frame_id = "camera_init";
@@ -310,7 +312,7 @@ int main(int argc, char **argv) {
       marker.type = visualization_msgs::Marker::LINE_LIST;
       marker.action = visualization_msgs::Marker::ADD;
       marker.pose.orientation.w = 1.0;
-      if (search_result.first >= 0) {
+      if (search_result.first >= 0) {                                 //loop found (can be false positive)
         triggle_loop_num++;
         Eigen::Matrix4d transform1 = Eigen::Matrix4d::Identity();
         Eigen::Matrix4d transform2 = Eigen::Matrix4d::Identity();
@@ -334,6 +336,7 @@ int main(int argc, char **argv) {
         // true positive
         if (cloud_overlap >= cloud_overlap_thr) {
           true_loop_num++;
+          if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}
           pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;
           matched_cloud.resize(
               btc_manager->key_cloud_vec_[search_result.first]->size());
@@ -371,6 +374,7 @@ int main(int argc, char **argv) {
           marker.points.push_back(point2);
 
         } else {
+          if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}
           pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;
           matched_cloud.resize(
               btc_manager->key_cloud_vec_[search_result.first]->size());
@@ -407,7 +411,7 @@ int main(int argc, char **argv) {
           marker.points.push_back(point2);
         }
 
-      } else {
+      } else {                                                      //loop not found
         if (submap_id > 0) {
           marker.scale.x = scale_path;
           marker.color = color_path;
@@ -422,6 +426,16 @@ int main(int argc, char **argv) {
           marker.points.push_back(point1);
           marker.points.push_back(point2);
         }
+        // if (submap_id > 250){
+        //   slow_loop.sleep();
+        //   double cloud_overlap =calc_overlap(transform_cloud.makeShared(), btc_manager->key_cloud_vec_[search_result.first], 0.5);
+        //   std::cout << "got here fine" << std::endl;
+        //   if (cloud_overlap >= cloud_overlap_thr){
+        //     if (search_result.second > 0){count_fn_in++;}else{count_fn_is++;}
+        //   }else{
+        //     if (search_result.second > 0){count_tn_in++;}else{count_tn_is++;}
+        //   }
+        // }   
       }
       marker_array.markers.push_back(marker);
       pubLoopStatus.publish(marker_array);
@@ -446,6 +460,15 @@ int main(int argc, char **argv) {
             << "ms, query: " << mean_query_time
             << "ms, update: " << mean_update_time << "ms, total: "
             << mean_descriptor_time + mean_query_time + mean_update_time << "ms"
+            << std::endl;
+  std::cout << "True positives due to overlap: " << count_tp_ov << std::endl
+            << "False positives due to overlap:" << count_fp_ov << std::endl
+            << "True positives due to inliers: " << count_tp_in << std::endl
+            << "False positives due to inliers:" << count_fp_in << std::endl
+            << "True negatives due to islands: " << count_tn_is << std::endl
+            << "False negatives due to islands:" << count_fn_is << std::endl
+            << "True negatives due to inliers: " << count_tn_in << std::endl
+            << "False negatives due to inliers:" << count_fn_in << std::endl
             << std::endl;
   return 0;
 }

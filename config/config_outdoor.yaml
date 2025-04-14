@@ -17,7 +17,7 @@ line_filter_enable: 1  # Enable line point filtering (1: enabled, 0: disabled)
 
 # std descriptor
 descriptor_near_num: 10  # Number of neighboring points to save for each point when generating triangles
-descriptor_min_len: 2    # Minimum edge length
+descriptor_min_len: 10    # Minimum edge length
 descriptor_max_len: 50   # Maximum edge length
 max_constrait_dis: 2     # Neighborhood range for non-maximum suppression
 triangle_resolution: 0.2  # Edge length amplification coefficient

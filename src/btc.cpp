@@ -585,8 +585,8 @@ void BtcDescManager::SearchLoop(
   auto t1 = std::chrono::high_resolution_clock::now();
   std::vector<BTCMatchList> candidate_matcher_vec;
   candidate_selector(btcs_vec, candidate_matcher_vec);
-
   auto t2 = std::chrono::high_resolution_clock::now();
+  
   // step2, select best candidates from rough candidates
   double best_score = 0;
   int best_candidate_id = -1;
