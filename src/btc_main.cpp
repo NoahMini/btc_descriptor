@@ -52,10 +52,9 @@ int main(int argc, char **argv) {
   int count_tp_in = 0;
   int count_fp_in = 0;
 
-  int count_fn_is = 0;
-  int count_tn_is = 0;
-  int count_fn_in = 0;
-  int count_tn_in = 0;
+  int count_fn = 0;
+  int count_tn = 0;
+
   nh.param<double>("cloud_overlap_thr", cloud_overlap_thr, 0.5);
   nh.param<std::string>("setting_path", setting_path, "");
   nh.param<std::string>("pcds_dir", pcds_dir, "");
@@ -86,24 +85,34 @@ int main(int argc, char **argv) {
 
   std_msgs::ColorRGBA color_tp;
   std_msgs::ColorRGBA color_fp;
-  std_msgs::ColorRGBA color_path;
+  std_msgs::ColorRGBA color_tn;
+  std_msgs::ColorRGBA color_fn;
+
   double scale_tp = 4.0;
-  double scale_fp = 5.0;
-  double scale_path = 3.0;
+  double scale_fp = 4.0;
+  double scale_tn = 3.0;
+  double scale_fn = 4.0;
+
   color_tp.a = 1.0;
-  color_tp.r = 0.0 / 255.0;
-  color_tp.g = 255.0 / 255.0;
-  color_tp.b = 0.0 / 255.0;
+  color_tp.r = 0.0;
+  color_tp.g = 1.0;
+  color_tp.b = 0.0;
 
   color_fp.a = 1.0;
   color_fp.r = 1.0;
   color_fp.g = 0.0;
   color_fp.b = 0.0;
 
-  color_path.a = 0.8;
-  color_path.r = 255.0 / 255.0;
-  color_path.g = 255.0 / 255.0;
-  color_path.b = 255.0 / 255.0;
+  color_tn.a = 1.0;
+  color_tn.r = 1.0;
+  color_tn.g = 1.0;
+  color_tn.b = 1.0;
+
+  color_fn.a = 1.0;
+  color_fn.r = 0.0;
+  color_fn.g = 0.0;
+  color_fn.b = 1.0;
+
 
   ros::Rate loop(50000);
   ros::Rate slow_loop(1000);
@@ -122,27 +131,39 @@ int main(int argc, char **argv) {
   int n = time_list.size();
   std::ifstream myfile;
   
-  myfile.open ("/home/noah/tfm/src/btc_descriptor/poses/groundtruth00.txt");
+  myfile.open (gt_file);
   if (!myfile.is_open()) {
     std::cout << "Failed to open file for reading.\n";
     return 1;
   }
   
-  int **mat = new int*[n];
+  int **loop_mat = new int*[n];
   for (int i = 0; i < n; ++i)
-      mat[i] = new int[n];
+      loop_mat[i] = new int[n];
 
   std::cout << n << std::endl;
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
       int c;
       myfile >> c;
-      mat[i][j] = c;
+      loop_mat[i][j] = c;
       
-      std::cout << mat[i][j];
+      //std::cout << loop_mat[i][j];
     }
-    std::cout << std::endl;
+    //std::cout << std::endl;
   }
+  std::vector<int> loop_sum;
+
+  // Compute row sums
+  for(int i = 0; i < n; i++) {
+      int sum = 0;
+      for(int j = 0; j < n; j++) {
+          sum += loop_mat[i][j];
+      }
+      loop_sum.push_back(sum);
+  }
+  //std::cout << loop_mat[0][1];   0
+  //std::cout << loop_mat[1][0];   1
 
   BtcDescManager *btc_manager = new BtcDescManager(config_setting);
   btc_manager->print_debug_info_ = false;
@@ -290,11 +311,7 @@ int main(int argc, char **argv) {
                   << search_result.first << ", score:" << search_result.second
                   << std::endl << std::endl;
 
-      // if (search_result.first > 0) {
-      //   std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
-      //             << search_result.first << ", score:" << search_result.second
-      //             << std::endl << std::endl;
-      // }
+      
       auto t_query_end = std::chrono::high_resolution_clock::now();
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
 
@@ -343,13 +360,16 @@ int main(int argc, char **argv) {
       marker.pose.orientation.w = 1.0;
       if (search_result.first >= 0) {                                 //loop found (can be false positive)
         triggle_loop_num++;
-        Eigen::Matrix4d transform1 = Eigen::Matrix4d::Identity();
-        Eigen::Matrix4d transform2 = Eigen::Matrix4d::Identity();
+        //Eigen::Matrix4d transform1 = Eigen::Matrix4d::Identity();
+        //Eigen::Matrix4d transform2 = Eigen::Matrix4d::Identity();
         // publish_std(loop_std_pair, transform1, transform2, pubBTC);
         slow_loop.sleep();
-        double cloud_overlap =
-            calc_overlap(transform_cloud.makeShared(),
-                         btc_manager->key_cloud_vec_[search_result.first], 0.5);
+        // double cloud_overlap =
+        //     calc_overlap(transform_cloud.makeShared(),
+        //                  btc_manager->key_cloud_vec_[search_result.first], 0.5);
+        int loop_match = loop_mat[submap_id][search_result.first - 2] + loop_mat[submap_id][search_result.first - 1] + 
+                          loop_mat[submap_id][search_result.first] + loop_mat[submap_id][search_result.first + 1] +
+                          loop_mat[submap_id][search_result.first + 2];
         pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
         for (auto var :
              btc_manager->history_binary_list_[search_result.first]) {
@@ -363,10 +383,11 @@ int main(int argc, char **argv) {
         pub_cloud.header.frame_id = "camera_init";
         pubMatchedBinary.publish(pub_cloud);
         // true positive
-        if (cloud_overlap >= cloud_overlap_thr) {
+        if (loop_match >= 1) {
           true_loop_num++;
-          if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}
-          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;
+          if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
+          
+          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
           matched_cloud.resize(
               btc_manager->key_cloud_vec_[search_result.first]->size());
           for (size_t i = 0;
@@ -384,6 +405,7 @@ int main(int argc, char **argv) {
             pi.b = 0;
             matched_cloud.points[i] = pi;
           }
+          
           pcl::toROSMsg(matched_cloud, pub_cloud);
           pub_cloud.header.frame_id = "camera_init";
           pubMatchedCloud.publish(pub_cloud);
@@ -403,8 +425,9 @@ int main(int argc, char **argv) {
           marker.points.push_back(point2);
 
         } else {
-          if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}
-          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;
+          if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}             //CHECK SOURCE OF FALSE POSITIVE
+          
+          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
           matched_cloud.resize(
               btc_manager->key_cloud_vec_[search_result.first]->size());
           for (size_t i = 0;
@@ -422,6 +445,7 @@ int main(int argc, char **argv) {
             pi.b = 0;
             matched_cloud.points[i] = pi;
           }
+          
           pcl::toROSMsg(matched_cloud, pub_cloud);
           pub_cloud.header.frame_id = "camera_init";
           pubMatchedCloud.publish(pub_cloud);
@@ -441,9 +465,17 @@ int main(int argc, char **argv) {
         }
 
       } else {                                                      //loop not found
+        slow_loop.sleep();
         if (submap_id > 0) {
-          marker.scale.x = scale_path;
-          marker.color = color_path;
+          if (loop_sum[submap_id] <= 5){
+            count_tn++;
+            marker.scale.x = scale_tn;
+            marker.color = color_tn;
+          }else{
+            count_fn++;
+            marker.scale.x = scale_fn;
+            marker.color = color_fn;
+          }
           geometry_msgs::Point point1;
           point1.x = pose_list[submap_id - 1].first[0];
           point1.y = pose_list[submap_id - 1].first[1];
@@ -494,10 +526,9 @@ int main(int argc, char **argv) {
             << "False positives due to overlap:" << count_fp_ov << std::endl
             << "True positives due to inliers: " << count_tp_in << std::endl
             << "False positives due to inliers:" << count_fp_in << std::endl
-            << "True negatives due to islands: " << count_tn_is << std::endl
-            << "False negatives due to islands:" << count_fn_is << std::endl
-            << "True negatives due to inliers: " << count_tn_in << std::endl
-            << "False negatives due to inliers:" << count_fn_in << std::endl
+
+            << "True negatives: " << count_tn << std::endl
+            << "False negatives:" << count_fn << std::endl
             << std::endl;
   return 0;
 }
