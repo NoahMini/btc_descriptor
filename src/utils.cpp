@@ -135,29 +135,6 @@ void load_pose_with_frame(
   }
 }
 
-// void read_groundtruth(
-//     const std::string &gt_file,
-//     int gt_list[][]){
-//   gt_list.clear();
-//   std::ifstream fin(gt_file);
-//   std::string line;
-//   int row = 0;
-//   while (getline(fin, line)) {
-//     std::istringstream sin(line);
-//     std::string info;
-//     int column = 0;
-//     while (getline(sin, info, ' ')) {
-//       bool p;
-//       std::stringstream data;
-//       data << info;
-//       data >> p;
-//       gt_list[row][column] = p;
-//       column++;
-//     }
-//     row++;
-//   }
-// }
-
 void load_evo_pose_with_time(
     const std::string &pose_file,
     std::vector<std::pair<Eigen::Vector3d, Eigen::Matrix3d>> &pose_list,
