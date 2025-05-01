@@ -3,6 +3,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <fstream>
+#include <iostream>
 
 #include <boost/filesystem.hpp>
 
@@ -40,6 +42,7 @@ int main(int argc, char **argv) {
   std::string setting_path = "";
   std::string pcds_dir = "";
   std::string pose_file = "";
+  std::string gt_file = "";
   std::string result_file = "";
   double cloud_overlap_thr = 0.5;
   bool calc_gt_enable = false;
@@ -57,6 +60,7 @@ int main(int argc, char **argv) {
   nh.param<std::string>("setting_path", setting_path, "");
   nh.param<std::string>("pcds_dir", pcds_dir, "");
   nh.param<std::string>("pose_file", pose_file, "");
+  nh.param<std::string>("gt_file", gt_file, "");
   nh.param<bool>("read_bin", read_bin, true);
 
   ros::Publisher pubOdomAftMapped =
@@ -113,7 +117,75 @@ int main(int argc, char **argv) {
   load_evo_pose_with_time(pose_file, pose_list, time_list);
   std::string print_msg = "Successfully load pose file:" + pose_file +
                           ". pose size:" + std::to_string(time_list.size());
+  std::cout << "even before";
   ROS_INFO_STREAM(print_msg.c_str());
+  std::cout << "even after" << std::endl;
+
+  //int gt_list[time_list.size()][time_list.size()];
+  //read_groundtruth(gt_file, gt_list);
+  // std::string line;
+  // std::ifstream myfile("/home/noah/tfm/src/btc_descriptor/poses/groundtruth00.txt");
+  // std::cout << "is fine" << std::endl;
+  // // std::string line;
+  // // int row = 0;
+  // // while (getline(fin, line)) {
+  // //   std::cout << "in loop" << std::endl;
+  // //   std::istringstream sin(line);
+  // //   std::string info;
+  // //   int column = 0;
+  // //   while (getline(sin, info, ' ')) {
+  // //     bool p;
+  // //     std::stringstream data;
+  // //     data << info;
+  // //     data >> p;
+  // //     gt_list[row][column] = p;
+  // //     std::cout << p << " ";
+  // //     column++;
+  // //   }
+  // //   std::cout << std::endl;
+  // //   row++;
+  // // }
+  // for (int i = 0; i < time_list.size(); ++i) {
+  //   for (int j = 0; j < time_list.size(); ++j) {
+  //     myfile >> gt_list[i][j];
+  //     std::cout << gt_list[i][j] << " ";
+  //   }
+  //   std::cout << std::endl;
+  // // }
+  int n = time_list.size();
+  std::cout << "before" << std::endl;
+  std::ifstream myfile;
+  
+  myfile.open ("/home/noah/tfm/src/btc_descriptor/poses/groundtruth00.txt");
+  if (!myfile.is_open()) {
+    std::cout << "Failed to open file for reading.\n";
+    return 1;
+  }
+  
+  std::cout << "after";
+  int **mat = new int*[n];
+  for (int i = 0; i < n; ++i)
+      mat[i] = new int[n];
+
+  std::cout << n << std::endl;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      //std::cout << i << " , " << j << std::endl; 
+      int c;
+      myfile >> c;
+      mat[i][j] = c;
+      
+      std::cout << mat[i][j];
+      //std::cout << c;
+    }
+    std::cout << std::endl;
+  }
+  // for (int i = 0; i < n; i++) {
+  //   for (int j = 0; j < n; j++) {
+  //     std::cout << mat[i][j];
+  //   }
+  //   std::cout << std::endl;
+  // }
 
   BtcDescManager *btc_manager = new BtcDescManager(config_setting);
   btc_manager->print_debug_info_ = false;
