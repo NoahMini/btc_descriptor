@@ -62,5 +62,23 @@ target_link_libraries(btc_place_recognition
         tbb
         utils_lib)
 
+add_executable(prueba src/test.cc)
+target_link_libraries(prueba 
+        ${catkin_LIBRARIES} 
+        ${PCL_LIBRARIES} 
+        ${OpenCV_LIBS} 
+        ${CERES_LIBRARIES} 
+        tbb
+        utils_lib)
+
+add_executable(test_main src/prueba.cpp src/btc.cpp)
+target_link_libraries(test_main 
+        ${catkin_LIBRARIES} 
+        ${PCL_LIBRARIES} 
+        ${OpenCV_LIBS} 
+        ${CERES_LIBRARIES} 
+        tbb
+        utils_lib)
+
               
       

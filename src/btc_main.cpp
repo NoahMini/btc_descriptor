@@ -263,7 +263,7 @@ int main(int argc, char **argv) {
       cv::Point3f p_kps;
       std::vector<bool> ABC;
       obindex2::BinaryDescriptor d1(128);
-      std::cout << btcs_vec.size() << std::endl;
+      std::cout << "Number of descriptors: " << btcs_vec.size() << std::endl;
 
       //Convert descriptors
       for (int ind = 0; ind < btcs_vec.size(); ++ind){
@@ -274,21 +274,21 @@ int main(int argc, char **argv) {
         if (ind == 0){std::cout << "kps:" << p_kps.x << " , " << p_kps.y << " , " << p_kps.z << " , " << std::endl;}
 
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_A_.occupy_array_.size(); bin_ind++){
-          if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind] == 1) {
+          if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind]) {
             d1.set(bin_ind);
           } else {
             d1.reset(bin_ind);
           }
         }
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_B_.occupy_array_.size(); bin_ind++){
-          if (btcs_vec[ind].binary_B_.occupy_array_[bin_ind] == 1) {
+          if (btcs_vec[ind].binary_B_.occupy_array_[bin_ind]) {
             d1.set(int(bin_ind + 40));
           } else {
             d1.reset(int(bin_ind + 40));
           }
         }
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_C_.occupy_array_.size(); bin_ind++){
-          if (btcs_vec[ind].binary_C_.occupy_array_[bin_ind] == 1) {
+          if (btcs_vec[ind].binary_C_.occupy_array_[bin_ind]) {
             d1.set(int(bin_ind + 80));
           } else {
             d1.reset(int(bin_ind + 80));
@@ -301,11 +301,19 @@ int main(int argc, char **argv) {
         dscs.row(ind) = m.row(0);
       }
 
+      // std::vector<cv::Point3f> kps;
+      // cv::Mat dscs= cv::Mat::ones(100, 128, CV_8U);
+      // for (auto i=0 ; i<100 ; i++){
+      //   cv::Point3f p_kps(i,i,i);
+      //   kps.push_back(p_kps);
+      // }
+
+
       // step2_2. Searching Loop   
       auto t_transform_end = std::chrono::high_resolution_clock::now();
       std::cout << "[Time] Transform input from BTC: " << time_inc(t_transform_end, t_query_begin) << "ms, " << std::endl;
 
-      lcdet.process(submap_id, kps, dscs, search_result);
+      lcdet.process(submap_id, kps, dscs, pcds_dir, search_result);
 
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second
@@ -316,17 +324,17 @@ int main(int argc, char **argv) {
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
 
       // step3. Add descriptors to the database                                           TODO :
-      // auto t_map_update_begin = std::chrono::high_resolution_clock::now();
-      // btc_manager->AddBtcDescs(btcs_vec);
-      // auto t_map_update_end = std::chrono::high_resolution_clock::now();
-      // update_time.push_back(time_inc(t_map_update_end, t_map_update_begin));
-      // std::cout << "[Time] descriptor extraction: "
-      //           << time_inc(t_descriptor_end, t_descriptor_begin) << "ms, "
-      //           << "query: " << time_inc(t_query_end, t_query_begin) << "ms, "
-      //           << "update map:"
-      //           << time_inc(t_map_update_end, t_map_update_begin) << "ms"
-      //           << std::endl;
-      // std::cout << std::endl;
+      auto t_map_update_begin = std::chrono::high_resolution_clock::now();
+      btc_manager->AddBtcDescs(btcs_vec);
+      auto t_map_update_end = std::chrono::high_resolution_clock::now();
+      update_time.push_back(time_inc(t_map_update_end, t_map_update_begin));
+      std::cout << "[Time] descriptor extraction: "
+                << time_inc(t_descriptor_end, t_descriptor_begin) << "ms, "
+                << "query: " << time_inc(t_query_end, t_query_begin) << "ms, "
+                << "update map:"
+                << time_inc(t_map_update_end, t_map_update_begin) << "ms"
+                << std::endl;
+      std::cout << std::endl;
 
       // down sample to save memory
       down_sampling_voxel(transform_cloud, 0.5);
@@ -487,16 +495,6 @@ int main(int argc, char **argv) {
           marker.points.push_back(point1);
           marker.points.push_back(point2);
         }
-        // if (submap_id > 250){
-        //   slow_loop.sleep();
-        //   double cloud_overlap =calc_overlap(transform_cloud.makeShared(), btc_manager->key_cloud_vec_[search_result.first], 0.5);
-        //   std::cout << "got here fine" << std::endl;
-        //   if (cloud_overlap >= cloud_overlap_thr){
-        //     if (search_result.second > 0){count_fn_in++;}else{count_fn_is++;}
-        //   }else{
-        //     if (search_result.second > 0){count_tn_in++;}else{count_tn_is++;}
-        //   }
-        // }   
       }
       marker_array.markers.push_back(marker);
       pubLoopStatus.publish(marker_array);
