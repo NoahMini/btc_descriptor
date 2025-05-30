@@ -138,7 +138,54 @@ int main(int argc, char **argv) {
             }
         }
     }
-    
+    for (unsigned one_id = 250 ; one_id < 260 ; one_id++){
+        pcl::PointCloud<pcl::PointXYZ>::Ptr qtransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        std::stringstream qss;
+        qss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << one_id
+            << ".bin";
+        
+        std::cout << qss.str() << std::endl;
+        std::vector<float> lidar_data = read_lidar_data(qss.str());
+
+        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        pcl::PointXYZ point;
+        point.x = lidar_data[i];
+        point.y = lidar_data[i + 1];
+        point.z = lidar_data[i + 2];
+        qtransform_cloud->points.push_back(point);
+        }
+        std::cout << "Read image_id fine" << std::endl;
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr ttransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        std::stringstream tss;
+        tss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << one_id - 240
+            << ".bin";
+
+        std::cout << tss.str() << std::endl;
+            lidar_data = read_lidar_data(tss.str());
+
+        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        pcl::PointXYZ point;
+        point.x = lidar_data[i];
+        point.y = lidar_data[i + 1];
+        point.z = lidar_data[i + 2];
+        ttransform_cloud->points.push_back(point);
+        }
+        std::cout << "Read best_img fine" << std::endl;
+
+        unsigned inliers = 0;
+        if (!qtransform_cloud->empty() && !ttransform_cloud->empty()){
+        
+        std::cout << "Query cloud size: " << qtransform_cloud->points.size() << std::endl;
+
+        std::cout << "Train cloud size: " << ttransform_cloud->points.size() << std::endl;
+
+        // ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud, inliers);
+        std::cout << "got out" << std::endl;
+        }
+    }
 
     return 0;
 }

@@ -184,10 +184,227 @@ int main(int argc, char **argv) {
 
       lcdet.process(submap_id, kps, dscs, pcds_dir, search_result);
 
+      // Check for inliers
+      if (search_result.second == 1){
+        pcl::PointCloud<pcl::PointXYZ>::Ptr qtransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        std::stringstream qss;
+        qss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << submap_id
+            << ".bin";
+        
+        std::cout << qss.str() << std::endl;
+        std::vector<float> lidar_data = read_lidar_data(qss.str());
+
+        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        pcl::PointXYZ point;
+        point.x = lidar_data[i];
+        point.y = lidar_data[i + 1];
+        point.z = lidar_data[i + 2];
+        qtransform_cloud->points.push_back(point);
+        }
+        std::cout << "Read image_id fine" << std::endl;
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr ttransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        std::stringstream tss;
+        tss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << search_result.first
+            << ".bin";
+
+        std::cout << tss.str() << std::endl;
+            lidar_data = read_lidar_data(tss.str());
+
+        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        pcl::PointXYZ point;
+        point.x = lidar_data[i];
+        point.y = lidar_data[i + 1];
+        point.z = lidar_data[i + 2];
+        ttransform_cloud->points.push_back(point);
+        }
+        std::cout << "Read best_img fine" << std::endl;
+
+        unsigned inliers = 0;
+        if (!qtransform_cloud->empty() && !ttransform_cloud->empty()){
+        
+        std::cout << "Query cloud size: " << qtransform_cloud->points.size() << std::endl;
+
+        std::cout << "Train cloud size: " << ttransform_cloud->points.size() << std::endl;
+
+        ibow_lcd::AlignmentResult result = ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud);
+        std::cout << "got out with inliers: " << result.inliers << std::endl;
+        }
+
+      }
+      // lcdet.consecutive_loops_++;
+      // std::cout << "Consecutive loops: " << lcdet.consecutive_loops_ << std::endl;
+
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second
                   << std::endl << std::endl;
+    
+      // // down sample to save memory
+      // down_sampling_voxel(transform_cloud, 0.5);
+      // btc_manager->key_cloud_vec_.push_back(transform_cloud.makeShared());
 
+      // // visulization                                                                     DONT WORRY ABOUT THIS 
+      // sensor_msgs::PointCloud2 pub_cloud;
+      // pcl::toROSMsg(transform_cloud, pub_cloud);
+      // pub_cloud.header.frame_id = "camera_init";
+      // pubCureentCloud.publish(pub_cloud);
+
+      // pcl::PointCloud<pcl::PointXYZ> key_points_cloud;
+      // for (auto var : btc_manager->history_binary_list_.back()) {
+      //   pcl::PointXYZ pi;
+      //   pi.x = var.location_[0];
+      //   pi.y = var.location_[1];
+      //   pi.z = var.location_[2];
+      //   key_points_cloud.push_back(pi);
+      // }
+      // pcl::toROSMsg(key_points_cloud, pub_cloud);
+      // pub_cloud.header.frame_id = "camera_init";
+      // pubCurrentBinary.publish(pub_cloud);
+
+      // visualization_msgs::MarkerArray marker_array;
+      // visualization_msgs::Marker marker;
+      // marker.header.frame_id = "camera_init";
+      // marker.ns = "colored_path";
+      // marker.id = submap_id;
+      // marker.type = visualization_msgs::Marker::LINE_LIST;
+      // marker.action = visualization_msgs::Marker::ADD;
+      // marker.pose.orientation.w = 1.0;
+      // if (search_result.first >= 0) {                                 //loop found (can be false positive)
+      //   triggle_loop_num++;
+      //   //Eigen::Matrix4d transform1 = Eigen::Matrix4d::Identity();
+      //   //Eigen::Matrix4d transform2 = Eigen::Matrix4d::Identity();
+      //   // publish_std(loop_std_pair, transform1, transform2, pubBTC);
+      //   slow_loop.sleep();
+      //   // double cloud_overlap =
+      //   //     calc_overlap(transform_cloud.makeShared(),
+      //   //                  btc_manager->key_cloud_vec_[search_result.first], 0.5);
+      //   int loop_match = loop_mat[submap_id][search_result.first - 2] + loop_mat[submap_id][search_result.first - 1] + 
+      //                     loop_mat[submap_id][search_result.first] + loop_mat[submap_id][search_result.first + 1] +
+      //                     loop_mat[submap_id][search_result.first + 2];
+      //   pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
+      //   for (auto var :
+      //        btc_manager->history_binary_list_[search_result.first]) {
+      //     pcl::PointXYZ pi;
+      //     pi.x = var.location_[0];
+      //     pi.y = var.location_[1];
+      //     pi.z = var.location_[2];
+      //     match_key_points_cloud.push_back(pi);
+      //   }
+      //   pcl::toROSMsg(match_key_points_cloud, pub_cloud);
+      //   pub_cloud.header.frame_id = "camera_init";
+      //   pubMatchedBinary.publish(pub_cloud);
+      //   // true positive
+      //   if (loop_match >= 1) {
+      //     true_loop_num++;
+      //     if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
+          
+      //     pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+      //     matched_cloud.resize(
+      //         btc_manager->key_cloud_vec_[search_result.first]->size());
+      //     for (size_t i = 0;
+      //          i < btc_manager->key_cloud_vec_[search_result.first]->size();
+      //          i++) {
+      //       pcl::PointXYZRGB pi;
+      //       pi.x =
+      //           btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
+      //       pi.y =
+      //           btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
+      //       pi.z =
+      //           btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
+      //       pi.r = 0;
+      //       pi.g = 255;
+      //       pi.b = 0;
+      //       matched_cloud.points[i] = pi;
+      //     }
+          
+      //     pcl::toROSMsg(matched_cloud, pub_cloud);
+      //     pub_cloud.header.frame_id = "camera_init";
+      //     pubMatchedCloud.publish(pub_cloud);
+      //     slow_loop.sleep();
+
+      //     marker.scale.x = scale_tp;
+      //     marker.color = color_tp;
+      //     geometry_msgs::Point point1;
+      //     point1.x = pose_list[submap_id - 1].first[0];
+      //     point1.y = pose_list[submap_id - 1].first[1];
+      //     point1.z = pose_list[submap_id - 1].first[2];
+      //     geometry_msgs::Point point2;
+      //     point2.x = pose_list[submap_id].first[0];
+      //     point2.y = pose_list[submap_id].first[1];
+      //     point2.z = pose_list[submap_id].first[2];
+      //     marker.points.push_back(point1);
+      //     marker.points.push_back(point2);
+
+      //   } else {
+      //     if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}             //CHECK SOURCE OF FALSE POSITIVE
+          
+      //     pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+      //     matched_cloud.resize(
+      //         btc_manager->key_cloud_vec_[search_result.first]->size());
+      //     for (size_t i = 0;
+      //          i < btc_manager->key_cloud_vec_[search_result.first]->size();
+      //          i++) {
+      //       pcl::PointXYZRGB pi;
+      //       pi.x =
+      //           btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
+      //       pi.y =
+      //           btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
+      //       pi.z =
+      //           btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
+      //       pi.r = 255;
+      //       pi.g = 0;
+      //       pi.b = 0;
+      //       matched_cloud.points[i] = pi;
+      //     }
+          
+      //     pcl::toROSMsg(matched_cloud, pub_cloud);
+      //     pub_cloud.header.frame_id = "camera_init";
+      //     pubMatchedCloud.publish(pub_cloud);
+      //     slow_loop.sleep();
+      //     marker.scale.x = scale_fp;
+      //     marker.color = color_fp;
+      //     geometry_msgs::Point point1;
+      //     point1.x = pose_list[submap_id - 1].first[0];
+      //     point1.y = pose_list[submap_id - 1].first[1];
+      //     point1.z = pose_list[submap_id - 1].first[2];
+      //     geometry_msgs::Point point2;
+      //     point2.x = pose_list[submap_id].first[0];
+      //     point2.y = pose_list[submap_id].first[1];
+      //     point2.z = pose_list[submap_id].first[2];
+      //     marker.points.push_back(point1);
+      //     marker.points.push_back(point2);
+      //   }
+
+      // } else {                                                      //loop not found
+      //   slow_loop.sleep();
+      //   if (submap_id > 0) {
+      //     if (loop_sum[submap_id] <= 5){
+      //       count_tn++;
+      //       marker.scale.x = scale_tn;
+      //       marker.color = color_tn;
+      //     }else{
+      //       count_fn++;
+      //       marker.scale.x = scale_fn;
+      //       marker.color = color_fn;
+      //     }
+      //     geometry_msgs::Point point1;
+      //     point1.x = pose_list[submap_id - 1].first[0];
+      //     point1.y = pose_list[submap_id - 1].first[1];
+      //     point1.z = pose_list[submap_id - 1].first[2];
+      //     geometry_msgs::Point point2;
+      //     point2.x = pose_list[submap_id].first[0];
+      //     point2.y = pose_list[submap_id].first[1];
+      //     point2.z = pose_list[submap_id].first[2];
+      //     marker.points.push_back(point1);
+      //     marker.points.push_back(point2);
+      //   }
+      // }
+      // marker_array.markers.push_back(marker);
+      // pubLoopStatus.publish(marker_array);
+      // loop.sleep();
     }
+    finish = true;
   }
 }

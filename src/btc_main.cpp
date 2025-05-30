@@ -11,6 +11,7 @@
 #include "include/btc.h"
 #include "include/utils.h"
 #include "ibow-lcd/lcdetector.h"
+#include "ibow-lcd/alignment.h"
 #include "obindex2/binary_descriptor.h"
 
 // Read KITTI data                                                                        FIGURE OUT INCLUSIONS
@@ -88,10 +89,10 @@ int main(int argc, char **argv) {
   std_msgs::ColorRGBA color_tn;
   std_msgs::ColorRGBA color_fn;
 
-  double scale_tp = 4.0;
-  double scale_fp = 4.0;
+  double scale_tp = 5.0;
+  double scale_fp = 5.0;
   double scale_tn = 3.0;
-  double scale_fn = 4.0;
+  double scale_fn = 5.0;
 
   color_tp.a = 1.0;
   color_tp.r = 0.0;
@@ -198,6 +199,7 @@ int main(int argc, char **argv) {
         std::stringstream ss;
         ss << pcds_dir << "/" << std::setfill('0') << std::setw(6) << submap_id
            << ".bin";
+           
         std::string pcd_file = ss.str();
         auto t_load_start = std::chrono::high_resolution_clock::now();
         std::vector<float> lidar_data = read_lidar_data(ss.str());
@@ -316,9 +318,70 @@ int main(int argc, char **argv) {
       lcdet.process(submap_id, kps, dscs, pcds_dir, search_result);
 
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
-                  << search_result.first << ", score:" << search_result.second
-                  << std::endl << std::endl;
+                  << search_result.first << ", score:" << search_result.second << std::endl << std::endl;
+      
+      //Check for inliers
+      if (search_result.second == 1){
+        pcl::PointCloud<pcl::PointXYZ>::Ptr qtransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
+        std::stringstream qss;
+        qss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << submap_id
+            << ".bin";
+        
+        std::cout << qss.str() << std::endl;
+        std::vector<float> lidar_data = read_lidar_data(qss.str());
+
+        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        pcl::PointXYZ point;
+        point.x = lidar_data[i];
+        point.y = lidar_data[i + 1];
+        point.z = lidar_data[i + 2];
+        qtransform_cloud->points.push_back(point);
+        }
+        std::cout << "Read image_id fine" << std::endl;
+
+        pcl::PointCloud<pcl::PointXYZ>::Ptr ttransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
+
+        std::stringstream tss;
+        tss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << search_result.first
+            << ".bin";
+
+        std::cout << tss.str() << std::endl;
+            lidar_data = read_lidar_data(tss.str());
+
+        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        pcl::PointXYZ point;
+        point.x = lidar_data[i];
+        point.y = lidar_data[i + 1];
+        point.z = lidar_data[i + 2];
+        ttransform_cloud->points.push_back(point);
+        }
+        std::cout << "Read best_img fine" << std::endl;
+
+        if (!qtransform_cloud->empty() && !ttransform_cloud->empty()){
+        
+          std::cout << "Query cloud size: " << qtransform_cloud->points.size() << std::endl;
+
+          std::cout << "Train cloud size: " << ttransform_cloud->points.size() << std::endl;
+
+          ibow_lcd::AlignmentResult result = ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud);
+          std::cout << "got out with inliers: " << result.inliers << std::endl;
+
+
+          if (result.inliers >= 80000) {
+
+            search_result.second = result.inliers;
+            lcdet.consecutive_loops_++;
+            std::cout << " Loop detected: Enough inliers" << std::endl;
+          } else {
+            search_result.first = -1;
+            search_result.second = result.inliers;
+            std::cout << " No loop: Not enough inliers" << std::endl;
+            lcdet.consecutive_loops_ = 0;
+          }
+        }
+        
+      }
       
       auto t_query_end = std::chrono::high_resolution_clock::now();
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
@@ -327,6 +390,7 @@ int main(int argc, char **argv) {
       auto t_map_update_begin = std::chrono::high_resolution_clock::now();
       btc_manager->AddBtcDescs(btcs_vec);
       auto t_map_update_end = std::chrono::high_resolution_clock::now();
+      
       update_time.push_back(time_inc(t_map_update_end, t_map_update_begin));
       std::cout << "[Time] descriptor extraction: "
                 << time_inc(t_descriptor_end, t_descriptor_begin) << "ms, "
