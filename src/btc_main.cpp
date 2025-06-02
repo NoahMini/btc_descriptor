@@ -157,11 +157,12 @@ int main(int argc, char **argv) {
 
   // Compute row sums
   for(int i = 0; i < n; i++) {
-      int sum = 0;
-      for(int j = 0; j < n; j++) {
-          sum += loop_mat[i][j];
-      }
-      loop_sum.push_back(sum);
+    int sum = 0;
+    for(int j = 0; j < n; j++) {
+        sum += loop_mat[i][j];
+    }
+    if (sum > 5){std::cout << "id: " << i << " with sum of " << sum << std::endl;}
+    loop_sum.push_back(sum);
   }
   //std::cout << loop_mat[0][1];   0
   //std::cout << loop_mat[1][0];   1
@@ -358,7 +359,7 @@ int main(int argc, char **argv) {
         }
         std::cout << "Read best_img fine" << std::endl;
 
-        if (!qtransform_cloud->empty() && !ttransform_cloud->empty()){
+        if (!qtransform_cloud->empty() && !ttransform_cloud->empty())
         
           std::cout << "Query cloud size: " << qtransform_cloud->points.size() << std::endl;
 
@@ -439,9 +440,11 @@ int main(int argc, char **argv) {
         // double cloud_overlap =
         //     calc_overlap(transform_cloud.makeShared(),
         //                  btc_manager->key_cloud_vec_[search_result.first], 0.5);
-        int loop_match = loop_mat[submap_id][search_result.first - 2] + loop_mat[submap_id][search_result.first - 1] + 
-                          loop_mat[submap_id][search_result.first] + loop_mat[submap_id][search_result.first + 1] +
-                          loop_mat[submap_id][search_result.first + 2];
+        int loop_match = 0;
+        for(int x = 0 ; x < 22 ; x++){
+          loop_match += loop_mat[submap_id][search_result.first + x - 11];
+        }
+
         pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
         for (auto var :
              btc_manager->history_binary_list_[search_result.first]) {
@@ -539,6 +542,7 @@ int main(int argc, char **argv) {
       } else {                                                      //loop not found
         slow_loop.sleep();
         if (submap_id > 0) {
+          std::cout << "Loop sum for submap_id " << submap_id << ": " << loop_sum[submap_id] << std::endl;
           if (loop_sum[submap_id] <= 5){
             count_tn++;
             marker.scale.x = scale_tn;
