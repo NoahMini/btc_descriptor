@@ -148,10 +148,11 @@ int main(int argc, char **argv) {
       int c;
       myfile >> c;
       loop_mat[i][j] = c;
+      myfile.ignore();
       
-      //std::cout << loop_mat[i][j];
+      // std::cout << loop_mat[i][j];
     }
-    //std::cout << std::endl;
+    // std::cout << std::endl;
   }
   std::vector<int> loop_sum;
 
@@ -161,7 +162,7 @@ int main(int argc, char **argv) {
     for(int j = 0; j < n; j++) {
         sum += loop_mat[i][j];
     }
-    if (sum > 5){std::cout << "id: " << i << " with sum of " << sum << std::endl;}
+    // if (sum > 5){std::cout << "id: " << i << " with sum of " << sum << std::endl;}
     loop_sum.push_back(sum);
   }
   //std::cout << loop_mat[0][1];   0
@@ -320,56 +321,63 @@ int main(int argc, char **argv) {
 
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second << std::endl << std::endl;
+
+      // down sample to save memory
+      down_sampling_voxel(transform_cloud, 0.5);
+      btc_manager->key_cloud_vec_.push_back(transform_cloud.makeShared());
       
       //Check for inliers
       if (search_result.second == 1){
         pcl::PointCloud<pcl::PointXYZ>::Ptr qtransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-        std::stringstream qss;
-        qss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << submap_id
-            << ".bin";
+        // std::stringstream qss;
+        // qss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << submap_id
+        //     << ".bin";
         
-        std::cout << qss.str() << std::endl;
-        std::vector<float> lidar_data = read_lidar_data(qss.str());
+        // std::cout << qss.str() << std::endl;
+        // std::vector<float> lidar_data = read_lidar_data(qss.str());
 
-        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        for (std::size_t i = 0; i < btc_manager->key_cloud_vec_[submap_id]->points.size(); i++) {
         pcl::PointXYZ point;
-        point.x = lidar_data[i];
-        point.y = lidar_data[i + 1];
-        point.z = lidar_data[i + 2];
+        point.x = btc_manager->key_cloud_vec_[submap_id]->points[i].x;
+        point.y = btc_manager->key_cloud_vec_[submap_id]->points[i].y;
+        point.z = btc_manager->key_cloud_vec_[submap_id]->points[i].z;
         qtransform_cloud->points.push_back(point);
         }
         std::cout << "Read image_id fine" << std::endl;
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr ttransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-        std::stringstream tss;
-        tss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << search_result.first
-            << ".bin";
+        // std::stringstream tss;
+        // tss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << search_result.first
+        //     << ".bin";
 
-        std::cout << tss.str() << std::endl;
-            lidar_data = read_lidar_data(tss.str());
+        // std::cout << tss.str() << std::endl;
+        //     lidar_data = read_lidar_data(tss.str());
 
-        for (std::size_t i = 0; i < lidar_data.size(); i += 4) {
+        for (std::size_t i = 0; i < btc_manager->key_cloud_vec_[search_result.first]->points.size(); i++) {
         pcl::PointXYZ point;
-        point.x = lidar_data[i];
-        point.y = lidar_data[i + 1];
-        point.z = lidar_data[i + 2];
+        point.x = btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
+        point.y = btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
+        point.z = btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
         ttransform_cloud->points.push_back(point);
         }
         std::cout << "Read best_img fine" << std::endl;
 
-        if (!qtransform_cloud->empty() && !ttransform_cloud->empty())
+        if (!qtransform_cloud->empty() && !ttransform_cloud->empty()){
         
           std::cout << "Query cloud size: " << qtransform_cloud->points.size() << std::endl;
 
           std::cout << "Train cloud size: " << ttransform_cloud->points.size() << std::endl;
 
+          double cloud_overlap = calc_overlap(transform_cloud.makeShared(), btc_manager->key_cloud_vec_[search_result.first], 0.5);
+          std::cout << "Overlap with cloud_overlap : " << cloud_overlap << std::endl;
+
           ibow_lcd::AlignmentResult result = ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud);
           std::cout << "got out with inliers: " << result.inliers << std::endl;
 
 
-          if (result.inliers >= 80000) {
+          if ((result.inliers >= qtransform_cloud->points.size()*0.1) || (cloud_overlap >= cloud_overlap_thr)) {  
 
             search_result.second = result.inliers;
             lcdet.consecutive_loops_++;
@@ -381,7 +389,6 @@ int main(int argc, char **argv) {
             lcdet.consecutive_loops_ = 0;
           }
         }
-        
       }
       
       auto t_query_end = std::chrono::high_resolution_clock::now();
@@ -401,9 +408,6 @@ int main(int argc, char **argv) {
                 << std::endl;
       std::cout << std::endl;
 
-      // down sample to save memory
-      down_sampling_voxel(transform_cloud, 0.5);
-      btc_manager->key_cloud_vec_.push_back(transform_cloud.makeShared());
 
       // visulization                                                                     DONT WORRY ABOUT THIS 
       sensor_msgs::PointCloud2 pub_cloud;
@@ -433,16 +437,13 @@ int main(int argc, char **argv) {
       marker.pose.orientation.w = 1.0;
       if (search_result.first >= 0) {                                 //loop found (can be false positive)
         triggle_loop_num++;
-        //Eigen::Matrix4d transform1 = Eigen::Matrix4d::Identity();
-        //Eigen::Matrix4d transform2 = Eigen::Matrix4d::Identity();
-        // publish_std(loop_std_pair, transform1, transform2, pubBTC);
         slow_loop.sleep();
-        // double cloud_overlap =
-        //     calc_overlap(transform_cloud.makeShared(),
-        //                  btc_manager->key_cloud_vec_[search_result.first], 0.5);
+        double cloud_overlap =
+            calc_overlap(transform_cloud.makeShared(),
+                         btc_manager->key_cloud_vec_[search_result.first], 0.5);
         int loop_match = 0;
-        for(int x = 0 ; x < 22 ; x++){
-          loop_match += loop_mat[submap_id][search_result.first + x - 11];
+        for(int x = 0 ; x < 42 ; x++){
+          loop_match += loop_mat[submap_id][search_result.first + x - 21];
         }
 
         pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
@@ -458,7 +459,7 @@ int main(int argc, char **argv) {
         pub_cloud.header.frame_id = "camera_init";
         pubMatchedBinary.publish(pub_cloud);
         // true positive
-        if (loop_match >= 1) {
+        if( (cloud_overlap >= cloud_overlap_thr) || (loop_match >= 1)){
           true_loop_num++;
           if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
           
@@ -543,7 +544,7 @@ int main(int argc, char **argv) {
         slow_loop.sleep();
         if (submap_id > 0) {
           std::cout << "Loop sum for submap_id " << submap_id << ": " << loop_sum[submap_id] << std::endl;
-          if (loop_sum[submap_id] <= 5){
+          if (loop_sum[submap_id] == 0){
             count_tn++;
             marker.scale.x = scale_tn;
             marker.color = color_tn;

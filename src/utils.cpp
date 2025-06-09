@@ -269,3 +269,30 @@ double calc_overlap(const pcl::PointCloud<pcl::PointXYZI>::Ptr &cloud1,
       (2 * match_num * skip_num) / (cloud1->size() + cloud2->size());
   return overlap;
 }
+
+double calc_overlap_xyz(const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud1,
+                    const pcl::PointCloud<pcl::PointXYZ>::Ptr &cloud2,
+                    double dis_threshold, int skip_num) {
+  double match_num = 0;
+  pcl::KdTreeFLANN<pcl::PointXYZ>::Ptr kd_tree(
+      new pcl::KdTreeFLANN<pcl::PointXYZ>);
+  kd_tree->setInputCloud(cloud2);
+  std::vector<int> pointIdxNKNSearch(1);
+  std::vector<float> pointNKNSquaredDistance(1);
+  for (size_t i = 0; i < cloud1->size(); i += skip_num) {
+    pcl::PointXYZ searchPoint = cloud1->points[i];
+    if (kd_tree->nearestKSearch(searchPoint, 1, pointIdxNKNSearch,
+                                pointNKNSquaredDistance) > 0) {
+      if (pointNKNSquaredDistance[0] < dis_threshold * dis_threshold) {
+        match_num++;
+      }
+    }
+  }
+  // std::cout << "cloud1 size:" << cloud1->size()
+  //           << " cloud2 size: " << cloud2->size() << " match size:" <<
+  //           match_num
+  //           << std::endl;
+  double overlap =
+      (2 * match_num * skip_num) / (cloud1->size() + cloud2->size());
+  return overlap;
+}

@@ -229,8 +229,8 @@ int main(int argc, char **argv) {
 
         std::cout << "Train cloud size: " << ttransform_cloud->points.size() << std::endl;
 
-        ibow_lcd::AlignmentResult result = ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud);
-        std::cout << "got out with inliers: " << result.inliers << std::endl;
+        // ibow_lcd::AlignmentResult result = ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud);
+        // std::cout << "got out with inliers: " << result.inliers << std::endl;
         }
 
       }
