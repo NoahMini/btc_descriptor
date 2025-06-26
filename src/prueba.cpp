@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
         dscs.row(ind) = m.row(0);
       }
 
-      lcdet.process(submap_id, kps, dscs, pcds_dir, search_result);
+      // lcdet.process(submap_id, kps, dscs, pcds_dir, search_result);
 
       // Check for inliers
       if (search_result.second == 1){

@@ -48,6 +48,7 @@ int main(int argc, char **argv) {
   double cloud_overlap_thr = 0.5;
   bool calc_gt_enable = false;
   bool read_bin = true;
+  int prev_match = -1;
   int count_tp_ov = 0;
   int count_fp_ov = 0;
   int count_tp_in = 0;
@@ -181,6 +182,14 @@ int main(int argc, char **argv) {
   bool finish = false;
 
   pcl::PCDReader reader;
+  std::ofstream outputFile;
+  outputFile.open("/home/noah/tfm/matchesDebug.txt");
+
+  std::ofstream processFile;
+  processFile.open("/home/noah/tfm/processDebug.txt");
+
+  std::ofstream matchFile;
+  matchFile.open("/home/noah/tfm/featMatchesDebug.txt");
 
   while (ros::ok() && !finish) {
 
@@ -317,7 +326,25 @@ int main(int argc, char **argv) {
       auto t_transform_end = std::chrono::high_resolution_clock::now();
       std::cout << "[Time] Transform input from BTC: " << time_inc(t_transform_end, t_query_begin) << "ms, " << std::endl;
 
-      lcdet.process(submap_id, kps, dscs, pcds_dir, search_result);
+      lcdet.process(submap_id, kps, dscs, pcds_dir, search_result, prev_match, processFile, matchFile);
+
+      
+      //write into outputfile
+      if ((search_result.second == 0)){
+        if (search_result.first > 0){
+          // outputFile.open ("matchesDebug.txt");
+          outputFile << "Submap id : " << submap_id << " matches with " << search_result.first << " due to overlap ; Match is ";
+          prev_match = search_result.first;
+          // outputFile.close();
+        } else if (search_result.first == -1){
+          // outputFile.open ("matchesDebug.txt");
+          outputFile << "Submap id : " << submap_id << " has no match ; Match is ";
+          prev_match = -1;
+          // outputFile.close();
+        }
+      }
+
+
 
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second << std::endl << std::endl;
@@ -370,26 +397,36 @@ int main(int argc, char **argv) {
 
           std::cout << "Train cloud size: " << ttransform_cloud->points.size() << std::endl;
 
-          double cloud_overlap = calc_overlap(transform_cloud.makeShared(), btc_manager->key_cloud_vec_[search_result.first], 0.5);
-          std::cout << "Overlap with cloud_overlap : " << cloud_overlap << std::endl;
+          // double cloud_overlap = calc_overlap(transform_cloud.makeShared(), btc_manager->key_cloud_vec_[search_result.first], 0.5);
+          // std::cout << "Overlap with cloud_overlap : " << cloud_overlap << std::endl;
 
           ibow_lcd::AlignmentResult result = ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud);
           std::cout << "got out with inliers: " << result.inliers << std::endl;
 
 
-          if ((result.inliers >= qtransform_cloud->points.size()*0.1) || (cloud_overlap >= cloud_overlap_thr)) {  
-
+          if (result.inliers >= 2000) {  
+            // outputFile.open ("matchesDebug.txt");
+            outputFile << "Submap id : " << submap_id << " matches with " << search_result.first << " due to inliers " 
+            << result.inliers << " of " << qtransform_cloud->points.size() << "; Match is ";
+            // outputFile.close();
             search_result.second = result.inliers;
             lcdet.consecutive_loops_++;
+            prev_match = search_result.first;
             std::cout << " Loop detected: Enough inliers" << std::endl;
           } else {
+            // outputFile.open ("matchesDebug.txt");
+            outputFile << "Submap id : " << submap_id << " does not match with " << search_result.first << " due to inliers " 
+            << result.inliers << " of " << qtransform_cloud->points.size() << "; Match is ";
+            // outputFile.close();
             search_result.first = -1;
             search_result.second = result.inliers;
+            prev_match = -1;
             std::cout << " No loop: Not enough inliers" << std::endl;
             lcdet.consecutive_loops_ = 0;
           }
         }
       }
+      
       
       auto t_query_end = std::chrono::high_resolution_clock::now();
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
@@ -442,8 +479,8 @@ int main(int argc, char **argv) {
             calc_overlap(transform_cloud.makeShared(),
                          btc_manager->key_cloud_vec_[search_result.first], 0.5);
         int loop_match = 0;
-        for(int x = 0 ; x < 42 ; x++){
-          loop_match += loop_mat[submap_id][search_result.first + x - 21];
+        for(int x = 0 ; x < 62 ; x++){
+          loop_match += loop_mat[submap_id][search_result.first + x - 31];
         }
 
         pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
@@ -460,6 +497,9 @@ int main(int argc, char **argv) {
         pubMatchedBinary.publish(pub_cloud);
         // true positive
         if( (cloud_overlap >= cloud_overlap_thr) || (loop_match >= 1)){
+          // outputFile.open ("matchesDebug.txt");
+          outputFile << "TRUE POSITIVE\n";
+          // outputFile.close();
           true_loop_num++;
           if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
           
@@ -501,6 +541,9 @@ int main(int argc, char **argv) {
           marker.points.push_back(point2);
 
         } else {
+          // outputFile.open ("matchesDebug.txt");
+          outputFile << "FALSE POSITIVE\n";
+          // outputFile.close();
           if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}             //CHECK SOURCE OF FALSE POSITIVE
           
           pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
@@ -545,10 +588,16 @@ int main(int argc, char **argv) {
         if (submap_id > 0) {
           std::cout << "Loop sum for submap_id " << submap_id << ": " << loop_sum[submap_id] << std::endl;
           if (loop_sum[submap_id] == 0){
+            // outputFile.open ("matchesDebug.txt");
+            outputFile << "TRUE NEGATIVE\n";
+            // outputFile.close();
             count_tn++;
             marker.scale.x = scale_tn;
             marker.color = color_tn;
           }else{
+            // outputFile.open ("matchesDebug.txt");
+            outputFile << "FALSE NEGATIVE\n";
+            // outputFile.close();
             count_fn++;
             marker.scale.x = scale_fn;
             marker.color = color_fn;
@@ -571,6 +620,7 @@ int main(int argc, char **argv) {
     }
     finish = true;
   }
+  outputFile.close();
 
   double mean_descriptor_time =
       std::accumulate(descriptor_time.begin(), descriptor_time.end(), 0) * 1.0 /
