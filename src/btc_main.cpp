@@ -326,9 +326,9 @@ int main(int argc, char **argv) {
       auto t_transform_end = std::chrono::high_resolution_clock::now();
       std::cout << "[Time] Transform input from BTC: " << time_inc(t_transform_end, t_query_begin) << "ms, " << std::endl;
 
-      lcdet.process(submap_id, kps, dscs, pcds_dir, search_result, prev_match, processFile, matchFile);
+      lcdet.process(submap_id, kps, dscs, search_result, prev_match, processFile, matchFile);
 
-      
+
       //write into outputfile
       if ((search_result.second == 0)){
         if (search_result.first > 0){
@@ -479,9 +479,15 @@ int main(int argc, char **argv) {
             calc_overlap(transform_cloud.makeShared(),
                          btc_manager->key_cloud_vec_[search_result.first], 0.5);
         int loop_match = 0;
-        for(int x = 0 ; x < 62 ; x++){
-          loop_match += loop_mat[submap_id][search_result.first + x - 31];
-        }
+        for (int v = submap_id - 15 ; v <= submap_id + 15 ; v++){
+          for(int x = search_result.first - 30 ; x <= search_result.first + 30 ; x++){
+            if ((v < pose_list.size()) && (x < pose_list.size())){
+              loop_match += loop_mat[v][x];
+            }
+          }
+        }        
+
+        std::cout << "Loop sum for submap_id " << submap_id << " with " << search_result.first << ": " << loop_match << std::endl;
 
         pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
         for (auto var :
@@ -498,7 +504,10 @@ int main(int argc, char **argv) {
         // true positive
         if( (cloud_overlap >= cloud_overlap_thr) || (loop_match >= 1)){
           // outputFile.open ("matchesDebug.txt");
-          outputFile << "TRUE POSITIVE\n";
+          outputFile << "TRUE POSITIVE" ;
+          if(cloud_overlap >= cloud_overlap_thr){ outputFile << " with CLOUD OVERLAP";}
+          if(loop_match >= 1){ outputFile << " with GT APROVAL";}
+          outputFile << "\n";
           // outputFile.close();
           true_loop_num++;
           if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
