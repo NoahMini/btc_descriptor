@@ -1,4 +1,4 @@
-function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compensate, load_files)
+function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compensate, load_files, inliers)
     % Given a resulting loop and a ground truth files, this function 
     % computes the corresponding precision / recall values  
     
@@ -19,7 +19,7 @@ function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compens
     
     loop_size = size(loops);
     gt_size = size(gtruth);
-    classified = zeros(1, loop_size(1));
+    classified = zeros(loop_size(1), 1);
     for i=1:loop_size(1)
         % Getting data about this loop
         % query_img = loops(i, 1);          % Current image?
@@ -46,7 +46,7 @@ function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compens
         % Taking a decision about this image
         if is_loop && gt_loop_closed
             TP = TP + 1;
-            classified(1, i) = 0;
+            classified(i, 1) = 0;
             
             % We compensate the fact that the GT has been manually labelled
             if compensate
@@ -56,9 +56,9 @@ function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compens
                         minval = train_id - 2;
                         maxval = train_id + 2;
                         if loops(i - j, 2) == 4 && loops(i - j, 3) > minval && loops(i - j, 3) < maxval
-                            if classified(1, i - j) == 2
+                            if classified(i - j, 1) == 2
                                 TN = TN - 1;
-                            elseif classified(1, i - j) == 3
+                            elseif classified(i - j, 1) == 3
                                 FN = FN - 1;
                             end
                         end
@@ -67,13 +67,13 @@ function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compens
             end
         elseif is_loop && (gt_nloops == 0 || ~gt_loop_closed)
             FP = FP + 1;
-            classified(1, i) = 1;
+            classified(i, 1) = 1;
         elseif ~is_loop && gt_nloops == 0
             TN = TN + 1;
-            classified(1, i) = 2;
+            classified(i, 1) = 2;
         elseif ~is_loop && gt_nloops > 0
             FN = FN + 1;
-            classified(1, i) = 3;
+            classified(i, 1) = 3;
         end        
     end
     
@@ -87,5 +87,8 @@ function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compens
     precision = TP / (TP + FP);
     recall = TP / (TP + FN);
     
+    if inliers == 2000
+        writematrix(classified, 'evaluated_loops.txt');
+    end
     %disp(['P/R: ', num2str(precision), ' / ', num2str(recall)]);
 end

@@ -182,9 +182,17 @@ int main(int argc, char **argv) {
   bool finish = false;
 
   pcl::PCDReader reader;
+  std::ofstream outputFile;
+  outputFile.open("/home/noah/tfm/matchesDebug.txt");
+
+  std::ofstream processFile;
+  processFile.open("/home/noah/tfm/processDebug.txt");
+
+  std::ofstream matchFile;
+  matchFile.open("/home/noah/tfm/featMatchesDebug.txt");
 
   std::ofstream loopFile;
-  loopFile.open("/home/noah/tfm/src/btc_descriptor/evaluation/results/KITTI00/loops.txt");
+  loopFile.open("/home/noah/tfm/src/btc_descriptor/evaluation/results/KITTI00/loops2.txt");
 
   while (ros::ok() && !finish) {
 
@@ -313,7 +321,17 @@ int main(int argc, char **argv) {
       auto t_transform_end = std::chrono::high_resolution_clock::now();
       std::cout << "[Time] Transform input from BTC: " << time_inc(t_transform_end, t_query_begin) << "ms, " << std::endl;
 
-      lcdet.debug(submap_id, kps, dscs, search_result, prev_match, loopFile);
+      lcdet.debug(submap_id, kps, dscs, search_result, prev_match, processFile, matchFile, loopFile);
+
+      //write into outputfile
+      if ((search_result.second == 0)){
+        if (search_result.first > 0){
+          outputFile << "Submap id : " << submap_id << " matches with " << search_result.first << " due to overlap ; Match is ";
+        } else if (search_result.first == -1){
+          outputFile << "Submap id : " << submap_id << " has no match ; Match is ";
+        }
+      }
+
 
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second << std::endl << std::endl;
@@ -359,11 +377,15 @@ int main(int argc, char **argv) {
           loopFile << std::endl;
 
           if ((result.inliers >= 2000) && (search_result.second == 1)) {  
+            outputFile << "Submap id : " << submap_id << " matches with " << search_result.first << " due to inliers " 
+            << result.inliers << " of " << qtransform_cloud->points.size() << "; Match is ";
             search_result.second = result.inliers;
             lcdet.consecutive_loops_++;
             prev_match = search_result.first;
             std::cout << " Loop detected: Enough inliers" << std::endl;
-          } else {
+          } else if ((result.inliers < 2000) && (search_result.second == 1)) {
+            outputFile << "Submap id : " << submap_id << " does not match with " << search_result.first << " due to inliers " 
+            << result.inliers << " of " << qtransform_cloud->points.size() << "; Match is ";
             search_result.first = -1;
             search_result.second = result.inliers;
             prev_match = -1;
@@ -372,13 +394,213 @@ int main(int argc, char **argv) {
           }
         }
       }
-      
       prev_match = search_result.first;
+
+
+      auto t_query_end = std::chrono::high_resolution_clock::now();
+      querying_time.push_back(time_inc(t_query_end, t_query_begin));
+
+      // step3. Add descriptors to the database                                           TODO :
+      auto t_map_update_begin = std::chrono::high_resolution_clock::now();
+      btc_manager->AddBtcDescs(btcs_vec);
+      auto t_map_update_end = std::chrono::high_resolution_clock::now();
       
+      update_time.push_back(time_inc(t_map_update_end, t_map_update_begin));
+      std::cout << "[Time] descriptor extraction: "
+                << time_inc(t_descriptor_end, t_descriptor_begin) << "ms, "
+                << "query: " << time_inc(t_query_end, t_query_begin) << "ms, "
+                << "update map:"
+                << time_inc(t_map_update_end, t_map_update_begin) << "ms"
+                << std::endl;
+      std::cout << std::endl;
+
+
+      // visulization                                                                     DONT WORRY ABOUT THIS 
+      sensor_msgs::PointCloud2 pub_cloud;
+      pcl::toROSMsg(transform_cloud, pub_cloud);
+      pub_cloud.header.frame_id = "camera_init";
+      pubCureentCloud.publish(pub_cloud);
+
+      pcl::PointCloud<pcl::PointXYZ> key_points_cloud;
+      for (auto var : btc_manager->history_binary_list_.back()) {
+        pcl::PointXYZ pi;
+        pi.x = var.location_[0];
+        pi.y = var.location_[1];
+        pi.z = var.location_[2];
+        key_points_cloud.push_back(pi);
+      }
+      pcl::toROSMsg(key_points_cloud, pub_cloud);
+      pub_cloud.header.frame_id = "camera_init";
+      pubCurrentBinary.publish(pub_cloud);
+
+      visualization_msgs::MarkerArray marker_array;
+      visualization_msgs::Marker marker;
+      marker.header.frame_id = "camera_init";
+      marker.ns = "colored_path";
+      marker.id = submap_id;
+      marker.type = visualization_msgs::Marker::LINE_LIST;
+      marker.action = visualization_msgs::Marker::ADD;
+      marker.pose.orientation.w = 1.0;
+      if (search_result.first >= 0) {                                 //loop found (can be false positive)
+        triggle_loop_num++;
+        slow_loop.sleep();
+        double cloud_overlap =
+            calc_overlap(transform_cloud.makeShared(),
+                         btc_manager->key_cloud_vec_[search_result.first], 0.5);
+        int loop_match = 0;
+        for (int v = submap_id - 15 ; v <= submap_id + 15 ; v++){
+          for(int x = search_result.first - 30 ; x <= search_result.first + 30 ; x++){
+            if ((v < pose_list.size()) && (x < pose_list.size())){
+              loop_match += loop_mat[v][x];
+            }
+          }
+        }        
+
+        std::cout << "Loop sum for submap_id " << submap_id << " with " << search_result.first << ": " << loop_match << std::endl;
+
+        pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
+        for (auto var :
+             btc_manager->history_binary_list_[search_result.first]) {
+          pcl::PointXYZ pi;
+          pi.x = var.location_[0];
+          pi.y = var.location_[1];
+          pi.z = var.location_[2];
+          match_key_points_cloud.push_back(pi);
+        }
+        pcl::toROSMsg(match_key_points_cloud, pub_cloud);
+        pub_cloud.header.frame_id = "camera_init";
+        pubMatchedBinary.publish(pub_cloud);
+        // true positive
+        if( (cloud_overlap >= cloud_overlap_thr) || (loop_match >= 1)){
+          // outputFile.open ("matchesDebug.txt");
+          outputFile << "TRUE POSITIVE" ;
+          if(cloud_overlap >= cloud_overlap_thr){ outputFile << " with CLOUD OVERLAP";}
+          if(loop_match >= 1){ outputFile << " with GT APROVAL";}
+          outputFile << "\n";
+          // outputFile.close();
+          true_loop_num++;
+          if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
+          
+          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+          matched_cloud.resize(
+              btc_manager->key_cloud_vec_[search_result.first]->size());
+          for (size_t i = 0;
+               i < btc_manager->key_cloud_vec_[search_result.first]->size();
+               i++) {
+            pcl::PointXYZRGB pi;
+            pi.x =
+                btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
+            pi.y =
+                btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
+            pi.z =
+                btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
+            pi.r = 0;
+            pi.g = 255;
+            pi.b = 0;
+            matched_cloud.points[i] = pi;
+          }
+          
+          pcl::toROSMsg(matched_cloud, pub_cloud);
+          pub_cloud.header.frame_id = "camera_init";
+          pubMatchedCloud.publish(pub_cloud);
+          slow_loop.sleep();
+
+          marker.scale.x = scale_tp;
+          marker.color = color_tp;
+          geometry_msgs::Point point1;
+          point1.x = pose_list[submap_id - 1].first[0];
+          point1.y = pose_list[submap_id - 1].first[1];
+          point1.z = pose_list[submap_id - 1].first[2];
+          geometry_msgs::Point point2;
+          point2.x = pose_list[submap_id].first[0];
+          point2.y = pose_list[submap_id].first[1];
+          point2.z = pose_list[submap_id].first[2];
+          marker.points.push_back(point1);
+          marker.points.push_back(point2);
+
+        } else {
+          // outputFile.open ("matchesDebug.txt");
+          outputFile << "FALSE POSITIVE\n";
+          // outputFile.close();
+          if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}             //CHECK SOURCE OF FALSE POSITIVE
+          
+          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+          matched_cloud.resize(
+              btc_manager->key_cloud_vec_[search_result.first]->size());
+          for (size_t i = 0;
+               i < btc_manager->key_cloud_vec_[search_result.first]->size();
+               i++) {
+            pcl::PointXYZRGB pi;
+            pi.x =
+                btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
+            pi.y =
+                btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
+            pi.z =
+                btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
+            pi.r = 255;
+            pi.g = 0;
+            pi.b = 0;
+            matched_cloud.points[i] = pi;
+          }
+          
+          pcl::toROSMsg(matched_cloud, pub_cloud);
+          pub_cloud.header.frame_id = "camera_init";
+          pubMatchedCloud.publish(pub_cloud);
+          slow_loop.sleep();
+          marker.scale.x = scale_fp;
+          marker.color = color_fp;
+          geometry_msgs::Point point1;
+          point1.x = pose_list[submap_id - 1].first[0];
+          point1.y = pose_list[submap_id - 1].first[1];
+          point1.z = pose_list[submap_id - 1].first[2];
+          geometry_msgs::Point point2;
+          point2.x = pose_list[submap_id].first[0];
+          point2.y = pose_list[submap_id].first[1];
+          point2.z = pose_list[submap_id].first[2];
+          marker.points.push_back(point1);
+          marker.points.push_back(point2);
+        }
+
+      } else {                                                      //loop not found
+        slow_loop.sleep();
+        if (submap_id > 0) {
+          std::cout << "Loop sum for submap_id " << submap_id << ": " << loop_sum[submap_id] << std::endl;
+          if (loop_sum[submap_id] == 0){
+            // outputFile.open ("matchesDebug.txt");
+            outputFile << "TRUE NEGATIVE\n";
+            // outputFile.close();
+            count_tn++;
+            marker.scale.x = scale_tn;
+            marker.color = color_tn;
+          }else{
+            // outputFile.open ("matchesDebug.txt");
+            outputFile << "FALSE NEGATIVE\n";
+            // outputFile.close();
+            count_fn++;
+            marker.scale.x = scale_fn;
+            marker.color = color_fn;
+          }
+          geometry_msgs::Point point1;
+          point1.x = pose_list[submap_id - 1].first[0];
+          point1.y = pose_list[submap_id - 1].first[1];
+          point1.z = pose_list[submap_id - 1].first[2];
+          geometry_msgs::Point point2;
+          point2.x = pose_list[submap_id].first[0];
+          point2.y = pose_list[submap_id].first[1];
+          point2.z = pose_list[submap_id].first[2];
+          marker.points.push_back(point1);
+          marker.points.push_back(point2);
+        }
+      }
+      marker_array.markers.push_back(marker);
+      pubLoopStatus.publish(marker_array);
       loop.sleep();
     }
     finish = true;
   }
+  outputFile.close();
+  matchFile.close();
+  loopFile.close();
 
   double mean_descriptor_time =
       std::accumulate(descriptor_time.begin(), descriptor_time.end(), 0) * 1.0 /

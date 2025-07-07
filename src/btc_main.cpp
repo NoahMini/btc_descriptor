@@ -332,15 +332,11 @@ int main(int argc, char **argv) {
       //write into outputfile
       if ((search_result.second == 0)){
         if (search_result.first > 0){
-          // outputFile.open ("matchesDebug.txt");
           outputFile << "Submap id : " << submap_id << " matches with " << search_result.first << " due to overlap ; Match is ";
           prev_match = search_result.first;
-          // outputFile.close();
         } else if (search_result.first == -1){
-          // outputFile.open ("matchesDebug.txt");
           outputFile << "Submap id : " << submap_id << " has no match ; Match is ";
           prev_match = -1;
-          // outputFile.close();
         }
       }
 
@@ -357,13 +353,6 @@ int main(int argc, char **argv) {
       if (search_result.second == 1){
         pcl::PointCloud<pcl::PointXYZ>::Ptr qtransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
 
-        // std::stringstream qss;
-        // qss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << submap_id
-        //     << ".bin";
-        
-        // std::cout << qss.str() << std::endl;
-        // std::vector<float> lidar_data = read_lidar_data(qss.str());
-
         for (std::size_t i = 0; i < btc_manager->key_cloud_vec_[submap_id]->points.size(); i++) {
         pcl::PointXYZ point;
         point.x = btc_manager->key_cloud_vec_[submap_id]->points[i].x;
@@ -374,13 +363,6 @@ int main(int argc, char **argv) {
         std::cout << "Read image_id fine" << std::endl;
 
         pcl::PointCloud<pcl::PointXYZ>::Ptr ttransform_cloud(new pcl::PointCloud<pcl::PointXYZ>());
-
-        // std::stringstream tss;
-        // tss << "/home/noah/tfm/images/KITTI/00g/velodyne" << "/" << std::setfill('0') << std::setw(6) << search_result.first
-        //     << ".bin";
-
-        // std::cout << tss.str() << std::endl;
-        //     lidar_data = read_lidar_data(tss.str());
 
         for (std::size_t i = 0; i < btc_manager->key_cloud_vec_[search_result.first]->points.size(); i++) {
         pcl::PointXYZ point;
@@ -397,27 +379,20 @@ int main(int argc, char **argv) {
 
           std::cout << "Train cloud size: " << ttransform_cloud->points.size() << std::endl;
 
-          // double cloud_overlap = calc_overlap(transform_cloud.makeShared(), btc_manager->key_cloud_vec_[search_result.first], 0.5);
-          // std::cout << "Overlap with cloud_overlap : " << cloud_overlap << std::endl;
-
           ibow_lcd::AlignmentResult result = ibow_lcd::computeCloudTransform(qtransform_cloud, ttransform_cloud);
           std::cout << "got out with inliers: " << result.inliers << std::endl;
 
 
           if (result.inliers >= 2000) {  
-            // outputFile.open ("matchesDebug.txt");
             outputFile << "Submap id : " << submap_id << " matches with " << search_result.first << " due to inliers " 
             << result.inliers << " of " << qtransform_cloud->points.size() << "; Match is ";
-            // outputFile.close();
             search_result.second = result.inliers;
             lcdet.consecutive_loops_++;
             prev_match = search_result.first;
             std::cout << " Loop detected: Enough inliers" << std::endl;
           } else {
-            // outputFile.open ("matchesDebug.txt");
             outputFile << "Submap id : " << submap_id << " does not match with " << search_result.first << " due to inliers " 
             << result.inliers << " of " << qtransform_cloud->points.size() << "; Match is ";
-            // outputFile.close();
             search_result.first = -1;
             search_result.second = result.inliers;
             prev_match = -1;

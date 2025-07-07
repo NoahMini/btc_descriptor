@@ -48,4 +48,7 @@ function loops = detect_loops(loops_file, prev, cons_loops, inliers)
             end            
         end
     end
+    if inliers == 2000
+        writematrix(loops, 'detected_loops.txt');
+    end
 end
