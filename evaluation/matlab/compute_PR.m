@@ -28,6 +28,7 @@ function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compens
         is_loop = status == 0;              % Is it a loop?
         gt_loop_closed = 0;                 % Is there any loop in the indicated range according to the GT file?
         gt_nloops = numel(find(gtruth(i, :)));  % Number of loops in the whole GT row
+        cloud_over = loops(i, 5);
         
         if is_loop
             % Selecting the range to search in the ground truth file.
@@ -39,12 +40,20 @@ function [precision, recall] = compute_PR(loops_file, gt_file, gt_neigh, compens
             if ind2 > gt_size(2)
                 ind2 = gt_size(2);
             end
-            gt_value = gtruth(i, ind1:ind2); % Ground truth range around to the loop closure candidate
+            vind1 = i - 20;
+            if vind1 < 1
+                vind1 = 1;
+            end
+            vind2 = i + 20;
+            if vind2 > gt_size(2)
+                vind2 = gt_size(2);
+            end
+            gt_value = gtruth(vind1:vind2, ind1:ind2); % Ground truth range around to the loop closure candidate
             gt_loop_closed = numel(find(gt_value)) > 0;            
         end
         
         % Taking a decision about this image
-        if is_loop && gt_loop_closed
+        if is_loop && (gt_loop_closed || cloud_over)
             TP = TP + 1;
             classified(i, 1) = 0;
             

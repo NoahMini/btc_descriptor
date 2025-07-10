@@ -3,7 +3,7 @@ function loops = detect_loops(loops_file, prev, cons_loops, inliers)
     curr_loops = loops_file;
     curr_loops_size = size(curr_loops);
     nimages = curr_loops_size(1);
-    loops = zeros(nimages, 4);
+    loops = zeros(nimages, 5);
     
     % Processing each image to generate the corresponding response
     consecutive_loops = 0;
@@ -15,19 +15,22 @@ function loops = detect_loops(loops_file, prev, cons_loops, inliers)
             loops(i, 2) = 2;
             loops(i, 3) = 0;
             loops(i, 4) = 0;
+            loops(i, 5) = 0;
         elseif curr_loops(i, 1) == 0 && curr_loops(i, 2) == 0
             % Assesing if there are no islands
             loops(i, 1) = i - 1;
             loops(i, 2) = 3;
             loops(i, 3) = 0;
             loops(i, 4) = 0;
+            loops(i, 5) = 0;
         else
             if consecutive_loops > cons_loops && overlap
                 % Assuming loops in extreme conditions
                 loops(i, 1) = i - 1;
                 loops(i, 2) = 0;
                 loops(i, 3) = curr_loops(i, 3);
-                loops(i, 4) = 0;                
+                loops(i, 4) = 0;
+                loops(i, 5) = curr_loops(i, 8);
                 consecutive_loops = consecutive_loops + 1;
             else
                 if curr_loops(i, 7) > inliers
@@ -36,6 +39,7 @@ function loops = detect_loops(loops_file, prev, cons_loops, inliers)
                     loops(i, 2) = 0;
                     loops(i, 3) = curr_loops(i, 3);
                     loops(i, 4) = curr_loops(i, 7);
+                    loops(i, 5) = curr_loops(i, 8);
                     consecutive_loops = consecutive_loops + 1;
                 else
                     % Incorrect loop due to there are not enough inliers
@@ -43,6 +47,7 @@ function loops = detect_loops(loops_file, prev, cons_loops, inliers)
                     loops(i, 2) = 4;
                     loops(i, 3) = curr_loops(i, 3);
                     loops(i, 4) = curr_loops(i, 7);
+                    loops(i, 5) = curr_loops(i, 8);
                     consecutive_loops = 0;
                 end
             end            

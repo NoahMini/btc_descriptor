@@ -9,7 +9,7 @@ function [PR, imgvssize, imgvstime] = process(directory, gt_neigh, compensate)
     end
 
     % Getting dataset information and loading files
-    loops_filename = strcat(directory, 'loops2.txt');
+    loops_filename = strcat(directory, 'loops.txt');
     loops_file = load(loops_filename);
     
     % Reading info file    
@@ -39,7 +39,7 @@ function [PR, imgvssize, imgvstime] = process(directory, gt_neigh, compensate)
     P_max = 0.0;
     R_max = 0.0;
     I_max = 0;
-    for i=1:3000
+    for i=1:5000
         % Processing the resulting file to transform the format
         disp(['inlier threshold: ', int2str(i)]);
         loops_trans_file = detect_loops(loops_file, prev, cons_loops, i);

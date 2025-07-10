@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
   matchFile.open("/home/noah/tfm/featMatchesDebug.txt");
 
   std::ofstream loopFile;
-  loopFile.open("/home/noah/tfm/src/btc_descriptor/evaluation/results/KITTI00/loops2.txt");
+  loopFile.open("/home/noah/tfm/src/btc_descriptor/evaluation/results/KITTI00/loops3.txt");
 
   while (ros::ok() && !finish) {
 
@@ -374,7 +374,15 @@ int main(int argc, char **argv) {
           std::cout << "got out with inliers: " << result.inliers << std::endl;
 
           loopFile << result.inliers << "\t";                    // Inliers
-          loopFile << std::endl;
+
+          // double cloud_overlap = calc_overlap(transform_cloud.makeShared(), btc_manager->key_cloud_vec_[search_result.first], 0.5);
+          // if (cloud_overlap >= 0.5){
+          //   loopFile << 1 << "\t";
+          // }else{
+          //   loopFile << 0 << "\t";              //cloud_overlap
+          // }
+
+          // loopFile << std::endl;
 
           if ((result.inliers >= 2000) && (search_result.second == 1)) {  
             outputFile << "Submap id : " << submap_id << " matches with " << search_result.first << " due to inliers " 
@@ -455,6 +463,12 @@ int main(int argc, char **argv) {
             }
           }
         }        
+        if (cloud_overlap >= 0.5){
+          loopFile << 1 << "\t";
+        }else{
+          loopFile << 0 << "\t";              //cloud_overlap
+        }
+        loopFile << std::endl;
 
         std::cout << "Loop sum for submap_id " << submap_id << " with " << search_result.first << ": " << loop_match << std::endl;
 
@@ -563,6 +577,8 @@ int main(int argc, char **argv) {
 
       } else {                                                      //loop not found
         slow_loop.sleep();
+        loopFile << 0 << "\t";              //cloud_overlap
+        loopFile << std::endl;
         if (submap_id > 0) {
           std::cout << "Loop sum for submap_id " << submap_id << ": " << loop_sum[submap_id] << std::endl;
           if (loop_sum[submap_id] == 0){
