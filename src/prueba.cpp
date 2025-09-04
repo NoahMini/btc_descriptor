@@ -36,7 +36,7 @@ std::vector<float> read_lidar_data(const std::string lidar_data_path) {
 }
 
 int main(int argc, char **argv) {
-  
+  // for (int number = 1; number < 6; number++){
   // Setup                                                                             DONT WORRY ABOUT THIS ?
   ros::init(argc, argv, "btc_place_recognition");
   ros::NodeHandle nh;
@@ -64,26 +64,26 @@ int main(int argc, char **argv) {
   nh.param<std::string>("gt_file", gt_file, "");
   nh.param<bool>("read_bin", read_bin, true);
 
-  ros::Publisher pubOdomAftMapped =
-      nh.advertise<nav_msgs::Odometry>("/aft_mapped_to_init", 10);
-  ros::Publisher pubCureentCloud =
-      nh.advertise<sensor_msgs::PointCloud2>("/cloud_current", 100);
-  ros::Publisher pubCurrentBinary =
-      nh.advertise<sensor_msgs::PointCloud2>("/cloud_key_points", 100);
-  ros::Publisher pubPath =
-      nh.advertise<visualization_msgs::MarkerArray>("descriptor_line", 10);
-  ros::Publisher pubCurrentPose =
-      nh.advertise<nav_msgs::Odometry>("/current_pose", 10);
-  ros::Publisher pubMatchedPose =
-      nh.advertise<nav_msgs::Odometry>("/matched_pose", 10);
-  ros::Publisher pubMatchedCloud =
-      nh.advertise<sensor_msgs::PointCloud2>("/cloud_matched", 100);
-  ros::Publisher pubMatchedBinary =
-      nh.advertise<sensor_msgs::PointCloud2>("/cloud_matched_key_points", 100);
-  ros::Publisher pubLoopStatus =
-      nh.advertise<visualization_msgs::MarkerArray>("/loop_status", 100);
-  ros::Publisher pubBTC =
-      nh.advertise<visualization_msgs::MarkerArray>("descriptor_line", 10);
+  // ros::Publisher pubOdomAftMapped =
+  //     nh.advertise<nav_msgs::Odometry>("/aft_mapped_to_init", 10);
+  // ros::Publisher pubCureentCloud =
+  //     nh.advertise<sensor_msgs::PointCloud2>("/cloud_current", 100);
+  // ros::Publisher pubCurrentBinary =
+  //     nh.advertise<sensor_msgs::PointCloud2>("/cloud_key_points", 100);
+  // ros::Publisher pubPath =
+  //     nh.advertise<visualization_msgs::MarkerArray>("descriptor_line", 10);
+  // ros::Publisher pubCurrentPose =
+  //     nh.advertise<nav_msgs::Odometry>("/current_pose", 10);
+  // ros::Publisher pubMatchedPose =
+  //     nh.advertise<nav_msgs::Odometry>("/matched_pose", 10);
+  // ros::Publisher pubMatchedCloud =
+  //     nh.advertise<sensor_msgs::PointCloud2>("/cloud_matched", 100);
+  // ros::Publisher pubMatchedBinary =
+  //     nh.advertise<sensor_msgs::PointCloud2>("/cloud_matched_key_points", 100);
+  // ros::Publisher pubLoopStatus =
+  //     nh.advertise<visualization_msgs::MarkerArray>("/loop_status", 100);
+  // ros::Publisher pubBTC =
+  //     nh.advertise<visualization_msgs::MarkerArray>("descriptor_line", 10);
 
   std_msgs::ColorRGBA color_tp;
   std_msgs::ColorRGBA color_fp;
@@ -192,7 +192,8 @@ int main(int argc, char **argv) {
   matchFile.open("/home/noah/tfm/featMatchesDebug.txt");
 
   std::ofstream loopFile;
-  loopFile.open("/home/noah/tfm/src/btc_descriptor/evaluation/results/KITTI00/loops3.txt");
+  auto filename_x = "/home/noah/tfm/src/btc_descriptor/evaluation/side_lengths/KITTI05/loops2.txt";
+  loopFile.open(filename_x);
 
   while (ros::ok() && !finish) {
 
@@ -274,11 +275,12 @@ int main(int argc, char **argv) {
       auto t_query_begin = std::chrono::high_resolution_clock::now();
       std::pair<int, double> search_result(-1, 0);
 
+      // following values given change based on how long we want the descriptors to be
       std::vector<cv::Point3f> kps;
-      cv::Mat dscs= cv::Mat(btcs_vec.size(), 128, CV_8U);
+      cv::Mat dscs= cv::Mat(btcs_vec.size(), 72, CV_8U);
       cv::Point3f p_kps;
       std::vector<bool> ABC;
-      obindex2::BinaryDescriptor d1(128);
+      obindex2::BinaryDescriptor d1(72);
       std::cout << "Number of descriptors: " << btcs_vec.size() << std::endl;
 
       //Convert descriptors
@@ -287,7 +289,12 @@ int main(int argc, char **argv) {
         p_kps.y = btcs_vec[ind].center_[1];
         p_kps.z = btcs_vec[ind].center_[2];
         kps.push_back(p_kps);
-        if (ind == 0){std::cout << "kps:" << p_kps.x << " , " << p_kps.y << " , " << p_kps.z << " , " << std::endl;}
+        if (ind == 0){
+          std::cout << "kps:" << p_kps.x << " , " << p_kps.y << " , " << p_kps.z << " , " << std::endl;
+          std::cout << btcs_vec[0].binary_A_.occupy_array_.size() << std::endl;
+          std::cout << btcs_vec[0].binary_B_.occupy_array_.size() << std::endl;
+          std::cout << btcs_vec[0].binary_C_.occupy_array_.size() << std::endl;
+        }
 
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_A_.occupy_array_.size(); bin_ind++){
           if (btcs_vec[ind].binary_A_.occupy_array_[bin_ind]) {
@@ -295,23 +302,29 @@ int main(int argc, char **argv) {
           } else {
             d1.reset(bin_ind);
           }
+          // if(ind ==0) {std::cout << btcs_vec[ind].binary_A_.occupy_array_[bin_ind];}
         }
+        // if(ind ==0) {std::cout << std::endl;}
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_B_.occupy_array_.size(); bin_ind++){
           if (btcs_vec[ind].binary_B_.occupy_array_[bin_ind]) {
-            d1.set(int(bin_ind + 40));
+            d1.set(int(bin_ind + 24));
           } else {
-            d1.reset(int(bin_ind + 40));
+            d1.reset(int(bin_ind + 24));
           }
+          // if(ind ==0) {std::cout << btcs_vec[ind].binary_B_.occupy_array_[bin_ind];}
         }
+        // if(ind ==0) {std::cout << std::endl;}
         for(int bin_ind = 0; bin_ind < btcs_vec[0].binary_C_.occupy_array_.size(); bin_ind++){
           if (btcs_vec[ind].binary_C_.occupy_array_[bin_ind]) {
-            d1.set(int(bin_ind + 80));
+            d1.set(int(bin_ind + 48));
           } else {
-            d1.reset(int(bin_ind + 80));
+            d1.reset(int(bin_ind + 48));
           }
+          // if(ind ==0) {std::cout << btcs_vec[ind].binary_C_.occupy_array_[bin_ind];}
         }
+        // if(ind ==0) {std::cout << std::endl;}
 
-        if (ind == 0){std::cout << d1.toString() << std::endl;}
+        // if (ind == 0){std::cout << d1.toString() << std::endl;}
         cv::Mat m = d1.toCvMat();
 
         dscs.row(ind) = m.row(0);
@@ -424,31 +437,31 @@ int main(int argc, char **argv) {
 
 
       // visulization                                                                     DONT WORRY ABOUT THIS 
-      sensor_msgs::PointCloud2 pub_cloud;
-      pcl::toROSMsg(transform_cloud, pub_cloud);
-      pub_cloud.header.frame_id = "camera_init";
-      pubCureentCloud.publish(pub_cloud);
+      // sensor_msgs::PointCloud2 pub_cloud;
+      // pcl::toROSMsg(transform_cloud, pub_cloud);
+      // pub_cloud.header.frame_id = "camera_init";
+      // pubCureentCloud.publish(pub_cloud);
 
-      pcl::PointCloud<pcl::PointXYZ> key_points_cloud;
-      for (auto var : btc_manager->history_binary_list_.back()) {
-        pcl::PointXYZ pi;
-        pi.x = var.location_[0];
-        pi.y = var.location_[1];
-        pi.z = var.location_[2];
-        key_points_cloud.push_back(pi);
-      }
-      pcl::toROSMsg(key_points_cloud, pub_cloud);
-      pub_cloud.header.frame_id = "camera_init";
-      pubCurrentBinary.publish(pub_cloud);
+      // pcl::PointCloud<pcl::PointXYZ> key_points_cloud;
+      // for (auto var : btc_manager->history_binary_list_.back()) {
+      //   pcl::PointXYZ pi;
+      //   pi.x = var.location_[0];
+      //   pi.y = var.location_[1];
+      //   pi.z = var.location_[2];
+      //   key_points_cloud.push_back(pi);
+      // }
+      // pcl::toROSMsg(key_points_cloud, pub_cloud);
+      // pub_cloud.header.frame_id = "camera_init";
+      // pubCurrentBinary.publish(pub_cloud);
 
-      visualization_msgs::MarkerArray marker_array;
-      visualization_msgs::Marker marker;
-      marker.header.frame_id = "camera_init";
-      marker.ns = "colored_path";
-      marker.id = submap_id;
-      marker.type = visualization_msgs::Marker::LINE_LIST;
-      marker.action = visualization_msgs::Marker::ADD;
-      marker.pose.orientation.w = 1.0;
+      // visualization_msgs::MarkerArray marker_array;
+      // visualization_msgs::Marker marker;
+      // marker.header.frame_id = "camera_init";
+      // marker.ns = "colored_path";
+      // marker.id = submap_id;
+      // marker.type = visualization_msgs::Marker::LINE_LIST;
+      // marker.action = visualization_msgs::Marker::ADD;
+      // marker.pose.orientation.w = 1.0;
       if (search_result.first >= 0) {                                 //loop found (can be false positive)
         triggle_loop_num++;
         slow_loop.sleep();
@@ -472,18 +485,18 @@ int main(int argc, char **argv) {
 
         std::cout << "Loop sum for submap_id " << submap_id << " with " << search_result.first << ": " << loop_match << std::endl;
 
-        pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
-        for (auto var :
-             btc_manager->history_binary_list_[search_result.first]) {
-          pcl::PointXYZ pi;
-          pi.x = var.location_[0];
-          pi.y = var.location_[1];
-          pi.z = var.location_[2];
-          match_key_points_cloud.push_back(pi);
-        }
-        pcl::toROSMsg(match_key_points_cloud, pub_cloud);
-        pub_cloud.header.frame_id = "camera_init";
-        pubMatchedBinary.publish(pub_cloud);
+        // pcl::PointCloud<pcl::PointXYZ> match_key_points_cloud;
+        // for (auto var :
+        //      btc_manager->history_binary_list_[search_result.first]) {
+        //   pcl::PointXYZ pi;
+        //   pi.x = var.location_[0];
+        //   pi.y = var.location_[1];
+        //   pi.z = var.location_[2];
+        //   match_key_points_cloud.push_back(pi);
+        // }
+        // pcl::toROSMsg(match_key_points_cloud, pub_cloud);
+        // pub_cloud.header.frame_id = "camera_init";
+        // pubMatchedBinary.publish(pub_cloud);
         // true positive
         if( (cloud_overlap >= cloud_overlap_thr) || (loop_match >= 1)){
           // outputFile.open ("matchesDebug.txt");
@@ -495,42 +508,42 @@ int main(int argc, char **argv) {
           true_loop_num++;
           if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
           
-          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
-          matched_cloud.resize(
-              btc_manager->key_cloud_vec_[search_result.first]->size());
-          for (size_t i = 0;
-               i < btc_manager->key_cloud_vec_[search_result.first]->size();
-               i++) {
-            pcl::PointXYZRGB pi;
-            pi.x =
-                btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
-            pi.y =
-                btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
-            pi.z =
-                btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
-            pi.r = 0;
-            pi.g = 255;
-            pi.b = 0;
-            matched_cloud.points[i] = pi;
-          }
+          // pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+          // matched_cloud.resize(
+          //     btc_manager->key_cloud_vec_[search_result.first]->size());
+          // for (size_t i = 0;
+          //      i < btc_manager->key_cloud_vec_[search_result.first]->size();
+          //      i++) {
+          //   pcl::PointXYZRGB pi;
+          //   pi.x =
+          //       btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
+          //   pi.y =
+          //       btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
+          //   pi.z =
+          //       btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
+          //   pi.r = 0;
+          //   pi.g = 255;
+          //   pi.b = 0;
+          //   matched_cloud.points[i] = pi;
+          // }
           
-          pcl::toROSMsg(matched_cloud, pub_cloud);
-          pub_cloud.header.frame_id = "camera_init";
-          pubMatchedCloud.publish(pub_cloud);
+          // pcl::toROSMsg(matched_cloud, pub_cloud);
+          // pub_cloud.header.frame_id = "camera_init";
+          // pubMatchedCloud.publish(pub_cloud);
           slow_loop.sleep();
 
-          marker.scale.x = scale_tp;
-          marker.color = color_tp;
-          geometry_msgs::Point point1;
-          point1.x = pose_list[submap_id - 1].first[0];
-          point1.y = pose_list[submap_id - 1].first[1];
-          point1.z = pose_list[submap_id - 1].first[2];
-          geometry_msgs::Point point2;
-          point2.x = pose_list[submap_id].first[0];
-          point2.y = pose_list[submap_id].first[1];
-          point2.z = pose_list[submap_id].first[2];
-          marker.points.push_back(point1);
-          marker.points.push_back(point2);
+          // marker.scale.x = scale_tp;
+          // marker.color = color_tp;
+          // geometry_msgs::Point point1;
+          // point1.x = pose_list[submap_id - 1].first[0];
+          // point1.y = pose_list[submap_id - 1].first[1];
+          // point1.z = pose_list[submap_id - 1].first[2];
+          // geometry_msgs::Point point2;
+          // point2.x = pose_list[submap_id].first[0];
+          // point2.y = pose_list[submap_id].first[1];
+          // point2.z = pose_list[submap_id].first[2];
+          // marker.points.push_back(point1);
+          // marker.points.push_back(point2);
 
         } else {
           // outputFile.open ("matchesDebug.txt");
@@ -538,41 +551,41 @@ int main(int argc, char **argv) {
           // outputFile.close();
           if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}             //CHECK SOURCE OF FALSE POSITIVE
           
-          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
-          matched_cloud.resize(
-              btc_manager->key_cloud_vec_[search_result.first]->size());
-          for (size_t i = 0;
-               i < btc_manager->key_cloud_vec_[search_result.first]->size();
-               i++) {
-            pcl::PointXYZRGB pi;
-            pi.x =
-                btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
-            pi.y =
-                btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
-            pi.z =
-                btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
-            pi.r = 255;
-            pi.g = 0;
-            pi.b = 0;
-            matched_cloud.points[i] = pi;
-          }
+          // pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+          // matched_cloud.resize(
+          //     btc_manager->key_cloud_vec_[search_result.first]->size());
+          // for (size_t i = 0;
+          //      i < btc_manager->key_cloud_vec_[search_result.first]->size();
+          //      i++) {
+          //   pcl::PointXYZRGB pi;
+          //   pi.x =
+          //       btc_manager->key_cloud_vec_[search_result.first]->points[i].x;
+          //   pi.y =
+          //       btc_manager->key_cloud_vec_[search_result.first]->points[i].y;
+          //   pi.z =
+          //       btc_manager->key_cloud_vec_[search_result.first]->points[i].z;
+          //   pi.r = 255;
+          //   pi.g = 0;
+          //   pi.b = 0;
+          //   matched_cloud.points[i] = pi;
+          // }
           
-          pcl::toROSMsg(matched_cloud, pub_cloud);
-          pub_cloud.header.frame_id = "camera_init";
-          pubMatchedCloud.publish(pub_cloud);
-          slow_loop.sleep();
-          marker.scale.x = scale_fp;
-          marker.color = color_fp;
-          geometry_msgs::Point point1;
-          point1.x = pose_list[submap_id - 1].first[0];
-          point1.y = pose_list[submap_id - 1].first[1];
-          point1.z = pose_list[submap_id - 1].first[2];
-          geometry_msgs::Point point2;
-          point2.x = pose_list[submap_id].first[0];
-          point2.y = pose_list[submap_id].first[1];
-          point2.z = pose_list[submap_id].first[2];
-          marker.points.push_back(point1);
-          marker.points.push_back(point2);
+          // pcl::toROSMsg(matched_cloud, pub_cloud);
+          // pub_cloud.header.frame_id = "camera_init";
+          // pubMatchedCloud.publish(pub_cloud);
+          // slow_loop.sleep();
+          // marker.scale.x = scale_fp;
+          // marker.color = color_fp;
+          // geometry_msgs::Point point1;
+          // point1.x = pose_list[submap_id - 1].first[0];
+          // point1.y = pose_list[submap_id - 1].first[1];
+          // point1.z = pose_list[submap_id - 1].first[2];
+          // geometry_msgs::Point point2;
+          // point2.x = pose_list[submap_id].first[0];
+          // point2.y = pose_list[submap_id].first[1];
+          // point2.z = pose_list[submap_id].first[2];
+          // marker.points.push_back(point1);
+          // marker.points.push_back(point2);
         }
 
       } else {                                                      //loop not found
@@ -586,30 +599,30 @@ int main(int argc, char **argv) {
             outputFile << "TRUE NEGATIVE\n";
             // outputFile.close();
             count_tn++;
-            marker.scale.x = scale_tn;
-            marker.color = color_tn;
+            // marker.scale.x = scale_tn;
+            // marker.color = color_tn;
           }else{
             // outputFile.open ("matchesDebug.txt");
             outputFile << "FALSE NEGATIVE\n";
             // outputFile.close();
             count_fn++;
-            marker.scale.x = scale_fn;
-            marker.color = color_fn;
+            // marker.scale.x = scale_fn;
+            // marker.color = color_fn;
           }
-          geometry_msgs::Point point1;
-          point1.x = pose_list[submap_id - 1].first[0];
-          point1.y = pose_list[submap_id - 1].first[1];
-          point1.z = pose_list[submap_id - 1].first[2];
-          geometry_msgs::Point point2;
-          point2.x = pose_list[submap_id].first[0];
-          point2.y = pose_list[submap_id].first[1];
-          point2.z = pose_list[submap_id].first[2];
-          marker.points.push_back(point1);
-          marker.points.push_back(point2);
+          // geometry_msgs::Point point1;
+          // point1.x = pose_list[submap_id - 1].first[0];
+          // point1.y = pose_list[submap_id - 1].first[1];
+          // point1.z = pose_list[submap_id - 1].first[2];
+          // geometry_msgs::Point point2;
+          // point2.x = pose_list[submap_id].first[0];
+          // point2.y = pose_list[submap_id].first[1];
+          // point2.z = pose_list[submap_id].first[2];
+          // marker.points.push_back(point1);
+          // marker.points.push_back(point2);
         }
       }
-      marker_array.markers.push_back(marker);
-      pubLoopStatus.publish(marker_array);
+      // marker_array.markers.push_back(marker);
+      // pubLoopStatus.publish(marker_array);
       loop.sleep();
     }
     finish = true;
@@ -643,5 +656,6 @@ int main(int argc, char **argv) {
             << "True negatives: " << count_tn << std::endl
             << "False negatives:" << count_fn << std::endl
             << std::endl;
-  return 0;
+// }
+return 0;
 }

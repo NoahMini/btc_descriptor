@@ -1,0 +1,6 @@
+{
+    "gt_file": "/home/noah/tfm/src/btc_descriptor/poses/truth05.txt",
+    "min_consecutive_loops": 5,
+    "min_inliers": 2000,
+    "p": 250
+}

@@ -1,5 +1,7 @@
 % Script for obtaining the required results for IROS'18
 base_dir = '/home/noah/tfm/src/btc_descriptor/evaluation/';
+test_dir = 'side_lengths/';
+kitti_dir = 'KITTI05/';
 gt_neigh = 40;
 compensate = false;
 
@@ -7,28 +9,97 @@ compensate = false;
 addpath('AcademicFigures/');
 
 % Obtaining CityCenter results
-curr_dir = strcat(base_dir, 'results/KITTI00/');
-[PR_K0, imgvssize_K0, imgvstime_K0] = process(curr_dir, gt_neigh, compensate);
-imgvstime_K0.time = smooth(imgvstime_K0.time);
+curr_dir = strcat(base_dir, test_dir, kitti_dir);
+filename = 'loops1.txt';
+[PR_K1, PRU_K1, imgvssize_K1, imgvstime_K1] = process(curr_dir, filename, gt_neigh, compensate);
+imgvstime_K1.time = smooth(imgvstime_K1.time);
+mod_out1 = [PR_K1.I ; PR_K1.P ; PR_K1.R ];
+mod_out1 = transpose(mod_out1);
+writematrix(mod_out1,strcat(curr_dir,'mod_out1.txt'), 'Delimiter', 'tab');
+out1 = [PRU_K1.N ; PRU_K1.P ; PRU_K1.R ];
+out1 = transpose(out1);
+writematrix(out1,strcat(curr_dir,'out1.txt'), 'Delimiter', 'tab');
 
-curr_dir = strcat(base_dir, 'results/KITTI05/');
-[PR_K5, imgvssize_K5, imgvstime_K5] = process(curr_dir, gt_neigh, compensate);
+curr_dir = strcat(base_dir, test_dir, kitti_dir);
+filename = 'loops2.txt';
+[PR_K2, PRU_K2, imgvssize_K2, imgvstime_K2] = process(curr_dir, filename, gt_neigh, compensate);
+imgvstime_K2.time = smooth(imgvstime_K2.time);
+mod_out2 = [PR_K2.I ; PR_K2.P ; PR_K2.R ];
+mod_out2 = transpose(mod_out2);
+writematrix(mod_out2, strcat(curr_dir, 'mod_out2.txt'), 'Delimiter', 'tab');
+out2 = [PRU_K2.N ; PRU_K2.P ; PRU_K2.R ];
+out2 = transpose(out2);
+writematrix(out2,strcat(curr_dir,'out2.txt'), 'Delimiter', 'tab');
+
+curr_dir = strcat(base_dir, test_dir, kitti_dir);
+filename = 'loops3.txt';
+[PR_K3, PRU_K3, imgvssize_K3, imgvstime_K3] = process(curr_dir, filename, gt_neigh, compensate);
+imgvstime_K3.time = smooth(imgvstime_K3.time);
+mod_out3 = [PR_K3.I ; PR_K3.P ; PR_K3.R ];
+mod_out3 = transpose(mod_out3);
+writematrix(mod_out3,strcat(curr_dir,'mod_out3.txt'), 'Delimiter', 'tab');
+out3 = [PRU_K3.N ; PRU_K3.P ; PRU_K3.R ];
+out3 = transpose(out3);
+writematrix(out3, strcat(curr_dir, 'out3.txt'), 'Delimiter', 'tab');
+
+curr_dir = strcat(base_dir, test_dir, kitti_dir);
+filename = 'loops4.txt';
+[PR_K4, PRU_K4, imgvssize_K4, imgvstime_K4] = process(curr_dir, filename, gt_neigh, compensate);
+imgvstime_K4.time = smooth(imgvstime_K4.time);
+mod_out4 = [PR_K4.I ; PR_K4.P ; PR_K4.R ];
+mod_out4 = transpose(mod_out4);
+writematrix(mod_out4, strcat(curr_dir, 'mod_out4.txt'), 'Delimiter', 'tab');
+out4 = [PRU_K4.N ; PRU_K4.P ; PRU_K4.R ];
+out4 = transpose(out4);
+writematrix(out4, strcat(curr_dir, 'out4.txt'), 'Delimiter', 'tab');
+
+curr_dir = strcat(base_dir, test_dir, kitti_dir);
+filename = 'loops5.txt';
+[PR_K5, PRU_K5, imgvssize_K5, imgvstime_K5] = process(curr_dir, filename, gt_neigh, compensate);
 imgvstime_K5.time = smooth(imgvstime_K5.time);
+mod_out5 = [PR_K5.I ; PR_K5.P ; PR_K5.R ];
+mod_out5 = transpose(mod_out5);
+writematrix(mod_out5, strcat(curr_dir, 'mod_out5.txt'), 'Delimiter', 'tab');
+out5 = [PRU_K5.N ; PRU_K5.P ; PRU_K5.R ];
+out5 = transpose(out5);
+writematrix(out5, strcat(curr_dir, 'out5.txt'), 'Delimiter', 'tab');
 
 % P/R curves
 afigure;
 hold on;
-plot(PR_K0.R, PR_K0.P, '-d', 'MarkerIndices', length(PR_K0.P));
-plot(PR_K5.R, PR_K5.P, '--^', 'MarkerIndices', length(PR_K5.P));
+plot(PR_K1.R, PR_K1.P, '-d', 'MarkerIndices', length(PR_K1.P));
+plot(PR_K2.R, PR_K2.P, '--^', 'MarkerIndices', length(PR_K2.P));
+plot(PR_K3.R, PR_K3.P, '-*', 'MarkerIndices', length(PR_K3.P));
+plot(PR_K4.R, PR_K4.P, '--s', 'MarkerIndices', length(PR_K4.P));
+plot(PR_K5.R, PR_K5.P, '-o', 'MarkerIndices', length(PR_K5.P));
 
 xlabel('Recall');
 ylabel('Precision');
 xlim([0, 1.02]);
 ylim([0, 1.02]);
 % legend('CC', 'NC', 'L6I', 'L6O', 'K00', 'K05', 'K06', 'Location', 'SouthWest');
-legend('K00', 'K05');
+legend('Exec 1', 'Exec 2', 'Exec 3', 'Exec 4', 'Exec 5');
 hold off;
-print('-depsc', strcat(base_dir, 'PR_curves'));
+print('-depsc', strcat(curr_dir, 'modPR_curves'));
+
+% P/R curves
+afigure;
+hold on;
+plot(PRU_K1.R(2:end), PRU_K1.P(2:end), '-d', 'MarkerIndices', length(PRU_K1.P)-1);
+plot(PRU_K2.R(2:end), PRU_K2.P(2:end), '--^', 'MarkerIndices', length(PRU_K2.P)-1);
+plot(PRU_K3.R(2:end), PRU_K3.P(2:end), '-*', 'MarkerIndices', length(PRU_K3.P)-1);
+plot(PRU_K4.R(2:end), PRU_K4.P(2:end), '--s', 'MarkerIndices', length(PRU_K4.P)-1);
+plot(PRU_K5.R(2:end), PRU_K5.P(2:end), '-o', 'MarkerIndices', length(PRU_K5.P)-1);
+
+xlabel('Recall');
+ylabel('Precision');
+xlim([0, 1.02]);
+ylim([0, 1.02]);
+% legend('CC', 'NC', 'L6I', 'L6O', 'K00', 'K05', 'K06', 'Location', 'SouthWest');
+legend('Exec 1', 'Exec 2', 'Exec 3', 'Exec 4', 'Exec 5');
+hold off;
+print('-depsc', strcat(curr_dir, 'PR_curves'));
+
 
 % Images vs Size
 afigure;
@@ -41,13 +112,13 @@ hold on;
 %plot(imgvssize_K5.img, imgvssize_K5.size, '--^', 'MarkerIndices', length(imgvssize_K5.size));
 %plot(imgvssize_K6.img, imgvssize_K6.size, '--p', 'MarkerIndices', length(imgvssize_K6.size));
 
-plot(imgvssize_K0.img(80:end), imgvssize_K0.size(80:end), '-d', 'MarkerIndices', length(imgvssize_K0.size(80:end)));
+plot(imgvssize_K1.img(80:end), imgvssize_K1.size(80:end), '-d', 'MarkerIndices', length(imgvssize_K1.size(80:end)));
 xlabel('Time Index');
 ylabel('Vocabulary Size (Words)');
-xlim([80, length(imgvssize_K0.size(80:end))]);
+xlim([80, length(imgvssize_K1.size(80:end))]);
 %legend('CC', 'NC', 'L6I', 'L6O', 'K00', 'K05', 'K06', 'Location', 'NorthWest');
 hold off;
-print('-depsc', strcat(base_dir, 'imgs_vs_size'));
+print('-depsc', strcat(curr_dir, 'imgs_vs_size'));
 
 % Images vs Time
 afigure;
@@ -60,23 +131,44 @@ hold on;
 %plot(imgvstime_K5.img, imgvstime_K5.time, '--^', 'MarkerIndices', length(imgvstime_K5.time));
 %plot(imgvstime_K6.img, imgvstime_K6.time, '--p', 'MarkerIndices', length(imgvstime_K6.time));
 
-plot(imgvstime_K0.img(80:end), imgvstime_K0.time(80:end), '-d', 'MarkerIndices', length(imgvstime_K0.time(80:end)));
+plot(imgvstime_K1.img(80:end), imgvstime_K1.time(80:end), '-d', 'MarkerIndices', length(imgvstime_K1.time(80:end)));
 xlabel('Time Index');
 ylabel('Avg. Time (ms)');
-xlim([80, length(imgvstime_K0.time(80:end))]);
+xlim([80, length(imgvstime_K1.time(80:end))]);
 %legend('CC', 'NC', 'L6I', 'L6O', 'K00', 'K05', 'K06', 'Location', 'NorthWest');
 hold off;
-print('-depsc', strcat(base_dir, 'imgs_vs_time'));
+print('-depsc', strcat(curr_dir, 'imgs_vs_time'));
 
 % Showing summaries
-disp('----- Summary KITTI 00 -----');
-disp(['Max P: ', num2str(PR_K0.P_max)]);
-disp(['Max R: ', num2str(PR_K0.R_max)]);
-disp(['Max VWords: ', num2str(imgvssize_K0.size(end))]);
-disp(['Avg. Time: ', num2str(mean(imgvstime_K0.time))]);
-disp(['Std. Time: ', num2str(std(imgvstime_K0.time))]);
+disp('----- Summary Exec. 1 -----');
+disp(['Max P: ', num2str(PR_K1.P_max)]);
+disp(['Max R: ', num2str(PR_K1.R_max)]);
+disp(['Max VWords: ', num2str(imgvssize_K1.size(end))]);
+disp(['Avg. Time: ', num2str(mean(imgvstime_K1.time))]);
+disp(['Std. Time: ', num2str(std(imgvstime_K1.time))]);
 
-disp('----- Summary KITTI 05 -----');
+disp('----- Summary Exec. 2 -----');
+disp(['Max P: ', num2str(PR_K2.P_max)]);
+disp(['Max R: ', num2str(PR_K2.R_max)]);
+disp(['Max VWords: ', num2str(imgvssize_K2.size(end))]);
+disp(['Avg. Time: ', num2str(mean(imgvstime_K2.time))]);
+disp(['Std. Time: ', num2str(std(imgvstime_K2.time))]);
+
+disp('----- Summary Exec. 3 -----');
+disp(['Max P: ', num2str(PR_K3.P_max)]);
+disp(['Max R: ', num2str(PR_K3.R_max)]);
+disp(['Max VWords: ', num2str(imgvssize_K3.size(end))]);
+disp(['Avg. Time: ', num2str(mean(imgvstime_K3.time))]);
+disp(['Std. Time: ', num2str(std(imgvstime_K3.time))]);
+
+disp('----- Summary Exec. 4 -----');
+disp(['Max P: ', num2str(PR_K4.P_max)]);
+disp(['Max R: ', num2str(PR_K4.R_max)]);
+disp(['Max VWords: ', num2str(imgvssize_K4.size(end))]);
+disp(['Avg. Time: ', num2str(mean(imgvstime_K4.time))]);
+disp(['Std. Time: ', num2str(std(imgvstime_K4.time))]);
+
+disp('----- Summary Exec. 5 -----');
 disp(['Max P: ', num2str(PR_K5.P_max)]);
 disp(['Max R: ', num2str(PR_K5.R_max)]);
 disp(['Max VWords: ', num2str(imgvssize_K5.size(end))]);

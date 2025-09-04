@@ -10,16 +10,16 @@ voxel_init_num: 10  # Minimum number of points in a voxel for extraction
 proj_plane_num: 1  # Number of projection planes
 proj_image_resolution: 0.5  # Resolution of the projected image in meters
 proj_image_high_inc: 0.1    # Height increment for the projected image in meters
-proj_dis_min: -1.0  # Minimum distance to the projection plane
-proj_dis_max: 3.1  # Maximum distance to the projection plane
+proj_dis_min: -0.5  # Minimum distance to the projection plane
+proj_dis_max: 2.0  # Maximum distance to the projection plane
 summary_min_thre: 10  # Minimum number of points in one image grid
 line_filter_enable: 1  # Enable line point filtering (1: enabled, 0: disabled)
 
 # std descriptor
 descriptor_near_num: 10  # Number of neighboring points to save for each point when generating triangles
-descriptor_min_len: 10    # Minimum edge length
-descriptor_max_len: 50   # Maximum edge length
-max_constrait_dis: 2     # Neighborhood range for non-maximum suppression
+descriptor_min_len: 2    # Minimum edge length
+descriptor_max_len: 30   # Maximum edge length
+max_constrait_dis: 1     # Neighborhood range for non-maximum suppression
 triangle_resolution: 0.2  # Edge length amplification coefficient
 
 # candidate search
