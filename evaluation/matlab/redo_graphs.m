@@ -1,7 +1,7 @@
 % Script for obtaining the required results for IROS'18
 base_dir = '/home/noah/tfm/src/btc_descriptor/evaluation/';
 test_dir = 'side_lengths';
-kitti_dir = 'KITTI00';
+kitti_dir = 'KITTI05';
 
 % Configuring subpaths
 addpath('AcademicFigures/');

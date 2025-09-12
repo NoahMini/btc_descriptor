@@ -197,7 +197,7 @@ int main(int argc, char **argv) {
     ibow_lcd::LCDetectorParams params;  // Assign desired parameters
     ibow_lcd::LCDetector lcdet(params);
 
-    for (size_t submap_id = 0; submap_id < pose_list.size(); ++submap_id) {
+    for (size_t submap_id = 0; submap_id < 10; ++submap_id) {           //pose_list.size()
       pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(
           new pcl::PointCloud<pcl::PointXYZI>());
       pcl::PointCloud<pcl::PointXYZI> transform_cloud;
