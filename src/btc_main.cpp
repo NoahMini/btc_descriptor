@@ -14,7 +14,7 @@
 #include "ibow-lcd/alignment.h"
 #include "obindex2/binary_descriptor.h"
 
-// Read KITTI data                                                                        FIGURE OUT INCLUSIONS
+// Read KITTI data                                                                       
 std::vector<float> read_lidar_data(const std::string lidar_data_path) {
   std::ifstream lidar_data_file;
   lidar_data_file.open(lidar_data_path,
@@ -37,7 +37,7 @@ std::vector<float> read_lidar_data(const std::string lidar_data_path) {
 
 int main(int argc, char **argv) {
   
-  // Setup                                                                             DONT WORRY ABOUT THIS ?
+  // Setup                                                                            
   ros::init(argc, argv, "btc_place_recognition");
   ros::NodeHandle nh;
   std::string setting_path = "";
@@ -150,10 +150,7 @@ int main(int argc, char **argv) {
       myfile >> c;
       loop_mat[i][j] = c;
       myfile.ignore();
-      
-      // std::cout << loop_mat[i][j];
     }
-    // std::cout << std::endl;
   }
   std::vector<int> loop_sum;
 
@@ -163,11 +160,8 @@ int main(int argc, char **argv) {
     for(int j = 0; j < n; j++) {
         sum += loop_mat[i][j];
     }
-    // if (sum > 5){std::cout << "id: " << i << " with sum of " << sum << std::endl;}
     loop_sum.push_back(sum);
   }
-  //std::cout << loop_mat[0][1];   0
-  //std::cout << loop_mat[1][0];   1
 
   BtcDescManager *btc_manager = new BtcDescManager(config_setting);
   btc_manager->print_debug_info_ = false;
@@ -197,12 +191,13 @@ int main(int argc, char **argv) {
     ibow_lcd::LCDetectorParams params;  // Assign desired parameters
     ibow_lcd::LCDetector lcdet(params);
 
-    for (size_t submap_id = 0; submap_id < 10; ++submap_id) {           //pose_list.size()
+    for (size_t submap_id = 0; submap_id < pose_list.size(); ++submap_id) {
       pcl::PointCloud<pcl::PointXYZI>::Ptr cloud(
           new pcl::PointCloud<pcl::PointXYZI>());
       pcl::PointCloud<pcl::PointXYZI> transform_cloud;
       cloud->reserve(1000000);
       transform_cloud.reserve(1000000);
+
       // Get pose information, only for gt overlap calculation
       Eigen::Vector3d translation = pose_list[submap_id].first;
       Eigen::Matrix3d rotation = pose_list[submap_id].second;
@@ -258,7 +253,7 @@ int main(int argc, char **argv) {
         }
       }
 
-      // step1. Descriptor Extraction                                                   THIS IS FINE
+      // step1. Descriptor Extraction                                            
       std::cout << "[Description] submap id:" << submap_id << std::endl;
       auto t_descriptor_begin = std::chrono::high_resolution_clock::now();
       std::vector<BTC> btcs_vec;
@@ -271,6 +266,7 @@ int main(int argc, char **argv) {
       auto t_query_begin = std::chrono::high_resolution_clock::now();
       std::pair<int, double> search_result(-1, 0);
 
+      // Modify size of dscs and d1 depending on lengths of BTC binary descriptors
       std::vector<cv::Point3f> kps;
       cv::Mat dscs= cv::Mat(btcs_vec.size(), 128, CV_8U);
       cv::Point3f p_kps;
@@ -340,8 +336,6 @@ int main(int argc, char **argv) {
         }
       }
 
-
-
       std::cout << "[Loop Detection] triggle loop: " << submap_id << "--"
                   << search_result.first << ", score:" << search_result.second << std::endl << std::endl;
 
@@ -406,7 +400,7 @@ int main(int argc, char **argv) {
       auto t_query_end = std::chrono::high_resolution_clock::now();
       querying_time.push_back(time_inc(t_query_end, t_query_begin));
 
-      // step3. Add descriptors to the database                                           TODO :
+      // step3. Add descriptors to the database                                          
       auto t_map_update_begin = std::chrono::high_resolution_clock::now();
       btc_manager->AddBtcDescs(btcs_vec);
       auto t_map_update_end = std::chrono::high_resolution_clock::now();
@@ -421,7 +415,7 @@ int main(int argc, char **argv) {
       std::cout << std::endl;
 
 
-      // visulization                                                                     DONT WORRY ABOUT THIS 
+      // visulization 
       sensor_msgs::PointCloud2 pub_cloud;
       pcl::toROSMsg(transform_cloud, pub_cloud);
       pub_cloud.header.frame_id = "camera_init";
@@ -487,7 +481,7 @@ int main(int argc, char **argv) {
           true_loop_num++;
           if (search_result.second > 0){count_tp_in++;}else{count_tp_ov++;}             //CHECK ORIGIN OF TRUE POSITIVE
           
-          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;
           matched_cloud.resize(
               btc_manager->key_cloud_vec_[search_result.first]->size());
           for (size_t i = 0;
@@ -525,12 +519,10 @@ int main(int argc, char **argv) {
           marker.points.push_back(point2);
 
         } else {
-          // outputFile.open ("matchesDebug.txt");
           outputFile << "FALSE POSITIVE\n";
-          // outputFile.close();
           if (search_result.second > 0){count_fp_in++;}else{count_fp_ov++;}             //CHECK SOURCE OF FALSE POSITIVE
           
-          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;                              //THIS IS FOR VISUALIZATION DON TOUCH IT
+          pcl::PointCloud<pcl::PointXYZRGB> matched_cloud;
           matched_cloud.resize(
               btc_manager->key_cloud_vec_[search_result.first]->size());
           for (size_t i = 0;
@@ -572,16 +564,12 @@ int main(int argc, char **argv) {
         if (submap_id > 0) {
           std::cout << "Loop sum for submap_id " << submap_id << ": " << loop_sum[submap_id] << std::endl;
           if (loop_sum[submap_id] == 0){
-            // outputFile.open ("matchesDebug.txt");
             outputFile << "TRUE NEGATIVE\n";
-            // outputFile.close();
             count_tn++;
             marker.scale.x = scale_tn;
             marker.color = color_tn;
           }else{
-            // outputFile.open ("matchesDebug.txt");
             outputFile << "FALSE NEGATIVE\n";
-            // outputFile.close();
             count_fn++;
             marker.scale.x = scale_fn;
             marker.color = color_fn;
